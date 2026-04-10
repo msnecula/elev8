@@ -1,0 +1,3 @@
+-- See Phase 2 output for full RLS policies.
+-- Run AFTER 0000_initial.sql
+-- Paste the full contents from the Phase 2 RLS file here.

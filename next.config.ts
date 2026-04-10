@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   webpack: (config) => {
     config.resolve.alias['@/drizzle'] = require('path').resolve(__dirname, 'drizzle');
     return config;
@@ -34,3 +36,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

@@ -77,7 +77,7 @@ export default async function NoticeDetailPage({ params }: { params: Promise<{ i
                     </p>
                   </div>
                   <Button size="sm" variant="outline" asChild>
-                    <a href={`/api/uploads/sign?path=${encodeURIComponent(n.filePath)}&bucket=notices`} target="_blank" rel="noopener noreferrer">
+                    <a href={`/api/uploads/sign?path=${encodeURIComponent(n.filePath)}&bucket=notices&redirect=true`} target="_blank" rel="noopener noreferrer">
                       View PDF
                     </a>
                   </Button>

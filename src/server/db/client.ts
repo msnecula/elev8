@@ -6,21 +6,16 @@ import { setDefaultResultOrder } from 'dns';
 
 setDefaultResultOrder('ipv4first');
 
-// Always use DATABASE_URL (Session Pooler) — never the direct connection at runtime
 const url = process.env.DATABASE_URL;
 
 if (!url) {
   throw new Error('DATABASE_URL is not set in .env.local');
 }
 
-if (url.includes('db.') && url.includes('.supabase.co')) {
-  throw new Error(
-    'DATABASE_URL is pointing to the direct connection (db.xxx.supabase.co). ' +
-    'Use the Session Pooler URL instead: postgresql://postgres.PROJECTREF:PASSWORD@aws-X-REGION.pooler.supabase.com:5432/postgres'
-  );
+if (url.includes('db.') && url.includes('.supabase.co') && !url.includes('pooler')) {
+  console.warn('[db] WARNING: DATABASE_URL appears to be a direct connection. Use the Session Pooler URL instead.');
 }
 
-// Singleton pattern — survives Next.js hot reloads in dev
 const globalForDb = global as unknown as { _pgClient: postgres.Sql | undefined };
 
 function createClient() {

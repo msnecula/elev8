@@ -22,7 +22,8 @@ import DispatchButton from './DispatchButton';
 
 export const metadata: Metadata = { title: 'Work Order' };
 
-export default async function WorkOrderDetailPage({ params }: { params: { id: string } }) {
+export default async function WorkOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const currentUser = await requireUser();
 
   const rows = await db
@@ -52,7 +53,7 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
     .leftJoin(technicians, eq(workOrders.assignedTechnicianId, technicians.id))
     .leftJoin(users, eq(workOrders.createdBy, users.id))
-    .where(eq(workOrders.id, params.id))
+    .where(eq(workOrders.id, id))
     .limit(1);
 
   if (!rows[0]) notFound();

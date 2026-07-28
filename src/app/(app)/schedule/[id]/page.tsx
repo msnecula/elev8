@@ -13,10 +13,11 @@ import ConfirmDateForm from '@/components/scheduling/ConfirmDateForm';
 
 export const metadata: Metadata = { title: 'Scheduling' };
 
-export default async function SchedulingPage({ params }: { params: { id: string } }) {
+export default async function SchedulingPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   await requireRole('admin', 'dispatcher');
 
-  // params.id is the jobId
+  // id is the jobId
   const jobResult = await db
     .select({
       job: jobs,
@@ -26,7 +27,7 @@ export default async function SchedulingPage({ params }: { params: { id: string 
     .from(jobs)
     .leftJoin(accounts, eq(jobs.accountId, accounts.id))
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
-    .where(eq(jobs.id, params.id))
+    .where(eq(jobs.id, id))
     .limit(1);
 
   if (!jobResult[0]) notFound();
@@ -39,7 +40,7 @@ export default async function SchedulingPage({ params }: { params: { id: string 
     })
     .from(schedulingRequests)
     .leftJoin(users, eq(schedulingRequests.requestedBy, users.id))
-    .where(eq(schedulingRequests.jobId, params.id))
+    .where(eq(schedulingRequests.jobId, id))
     .orderBy(desc(schedulingRequests.createdAt));
 
   const pendingRequest = requests.find(r => r.request.status === 'pending');

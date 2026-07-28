@@ -1,12 +1,5 @@
 import 'server-only';
 
-/**
- * Extracts text from a PDF buffer.
- *
- * Strategy:
- * 1. Try pdf-parse (fast, free — works for text-based PDFs)
- * 2. If no text found, fall back to OpenAI GPT-4o vision (handles scanned PDFs)
- */
 export async function extractPdfText(input: Buffer | string): Promise<{
   text: string;
   error: string | null;
@@ -14,7 +7,6 @@ export async function extractPdfText(input: Buffer | string): Promise<{
 }> {
   let buffer: Buffer;
 
-  // If a file path string is passed, download from Supabase Storage
   if (typeof input === 'string') {
     try {
       const { createServiceClient } = await import('@/lib/supabase/server');
@@ -29,68 +21,46 @@ export async function extractPdfText(input: Buffer | string): Promise<{
     buffer = input;
   }
 
-  // ── Strategy 1: pdf-parse ─────────────────────────────────────────────────
+  // Strategy 1: pdf-parse (text-based PDFs)
   try {
     const pdfParse = (await import('pdf-parse')).default;
     const result = await pdfParse(buffer);
     const text = result.text?.trim() ?? '';
-
     if (text.length > 100) {
       return { text, error: null, method: 'pdf-parse' };
     }
-    console.log('[pdfExtractor] pdf-parse found insufficient text, trying vision fallback…');
   } catch (err) {
     console.warn('[pdfExtractor] pdf-parse failed:', err instanceof Error ? err.message : err);
   }
 
-  // ── Strategy 2: OpenAI vision (scanned / image-based PDFs) ───────────────
+  // Strategy 2: OpenAI vision (scanned PDFs)
   try {
-    const text = await extractWithVision(buffer);
-    if (text && text.length > 50) {
-      return { text, error: null, method: 'openai-vision' };
-    }
-    return { text: '', error: 'Could not extract readable text from this PDF.', method: 'none' };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.warn('[pdfExtractor] Vision fallback failed:', message);
-    return {
-      text: '',
-      error: `Could not extract text from this PDF. ${message}`,
-      method: 'none',
-    };
-  }
-}
-
-async function extractWithVision(buffer: Buffer): Promise<string> {
-  const { openai } = await import('@/lib/openai');
-
-  const base64Pdf = buffer.toString('base64');
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 4000,
-    messages: [
-      {
+    const { openai } = await import('@/lib/openai');
+    const base64Pdf = buffer.toString('base64');
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 4000,
+      messages: [{
         role: 'user',
         content: [
           {
             type: 'text',
-            text: `This is a scanned PDF document — likely an elevator Order to Comply or CAL/OSHA inspection notice.
-Extract ALL visible text from this document exactly as it appears.
-Include: property address, violation items, deadlines, inspection dates, violation codes, case numbers, names, phone numbers.
-Output only the raw extracted text with no formatting or commentary.`,
+            text: 'Extract ALL text from this elevator compliance document. Include property address, violations, deadlines, dates, codes. Output raw text only.',
           },
           {
             type: 'image_url',
-            image_url: {
-              url: `data:application/pdf;base64,${base64Pdf}`,
-              detail: 'high',
-            },
+            image_url: { url: `data:application/pdf;base64,${base64Pdf}`, detail: 'high' },
           },
         ],
-      },
-    ],
-  });
+      }],
+    });
+    const text = response.choices[0]?.message?.content ?? '';
+    if (text.length > 50) {
+      return { text, error: null, method: 'openai-vision' };
+    }
+  } catch (err) {
+    console.warn('[pdfExtractor] Vision fallback failed:', err instanceof Error ? err.message : err);
+  }
 
-  return response.choices[0]?.message?.content ?? '';
+  return { text: '', error: 'Could not extract text from this PDF.', method: 'none' };
 }

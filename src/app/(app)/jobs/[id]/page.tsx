@@ -16,7 +16,8 @@ import ActivityLogFeed from '@/components/jobs/ActivityLogFeed';
 
 export const metadata: Metadata = { title: 'Job Detail' };
 
-export default async function JobDetailPage({ params }: { params: { id: string } }) {
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const currentUser = await requireRole('admin', 'reviewer', 'dispatcher');
 
   const result = await db
@@ -32,7 +33,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
     .leftJoin(notices, eq(jobs.noticeId, notices.id))
     .leftJoin(users, eq(jobs.assignedReviewerId, users.id))
-    .where(eq(jobs.id, params.id))
+    .where(eq(jobs.id, id))
     .limit(1);
 
   if (!result[0]) notFound();
@@ -44,18 +45,18 @@ export default async function JobDetailPage({ params }: { params: { id: string }
       .select({ log: activityLogs, actor: { fullName: users.fullName } })
       .from(activityLogs)
       .leftJoin(users, eq(activityLogs.actorId, users.id))
-      .where(eq(activityLogs.entityId, params.id))
+      .where(eq(activityLogs.entityId, id))
       .orderBy(desc(activityLogs.createdAt))
       .limit(50),
     db
       .select({ id: workOrders.id, status: workOrders.status, scheduledStart: workOrders.scheduledStart, fortyEightHourStatus: workOrders.fortyEightHourStatus })
       .from(workOrders)
-      .where(eq(workOrders.jobId, params.id))
+      .where(eq(workOrders.jobId, id))
       .orderBy(desc(workOrders.createdAt)),
     db
       .select({ id: proposals.id, status: proposals.status, totalAmount: proposals.totalAmount, version: proposals.version })
       .from(proposals)
-      .where(eq(proposals.jobId, params.id))
+      .where(eq(proposals.jobId, id))
       .orderBy(desc(proposals.createdAt)),
   ]);
 
@@ -119,7 +120,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 </CardTitle>
                 {(currentUser.role === 'admin' || currentUser.role === 'dispatcher') && (
                   <Button size="sm" variant="outline" asChild>
-                    <Link href={`/work-orders/new?jobId=${params.id}`}>Create Work Order</Link>
+                    <Link href={`/work-orders/new?jobId=${id}`}>Create Work Order</Link>
                   </Button>
                 )}
               </div>
@@ -157,7 +158,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 </CardTitle>
                 {(currentUser.role === 'admin' || currentUser.role === 'reviewer') && (
                   <Button size="sm" variant="outline" asChild>
-                    <Link href={`/proposals/new?jobId=${params.id}`}>New Proposal</Link>
+                    <Link href={`/proposals/new?jobId=${id}`}>New Proposal</Link>
                   </Button>
                 )}
               </div>

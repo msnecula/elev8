@@ -1,6 +1,8 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sweepFortyEightHourNotices } from '@/server/services/fortyEightHour';
 
+// Triggered every 30 minutes via Vercel Cron (see vercel.json)
+// Protected by CRON_SECRET in Authorization header
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   const expected = `Bearer ${process.env.CRON_SECRET}`;

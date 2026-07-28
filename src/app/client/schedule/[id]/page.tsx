@@ -13,13 +13,14 @@ import SchedulingRequestForm from '@/components/scheduling/SchedulingRequestForm
 
 export const metadata: Metadata = { title: 'Request Scheduling' };
 
-export default async function ClientSchedulePage({ params }: { params: { id: string } }) {
+export default async function ClientSchedulePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const user = await requireUser();
   if (!user.accountId) redirect('/client');
 
-  // params.id is the jobId
+  // id is the jobId
   const job = await db.query.jobs.findFirst({
-    where: and(eq(jobs.id, params.id), eq(jobs.accountId, user.accountId)),
+    where: and(eq(jobs.id, id), eq(jobs.accountId, user.accountId)),
     columns: {
       id: true, title: true, stage: true, urgency: true,
       complianceCoordinationRequired: true, fortyEightHourRequired: true,
@@ -30,14 +31,14 @@ export default async function ClientSchedulePage({ params }: { params: { id: str
 
   // Must be approved to schedule
   if (!['approved', 'scheduled', 'dispatched', 'in_progress', 'completed'].includes(job.stage)) {
-    redirect(`/client/jobs/${params.id}`);
+    redirect(`/client/jobs/${id}`);
   }
 
   // Get existing scheduling requests for this job
   const requests = await db
     .select()
     .from(schedulingRequests)
-    .where(eq(schedulingRequests.jobId, params.id))
+    .where(eq(schedulingRequests.jobId, id))
     .orderBy(desc(schedulingRequests.createdAt));
 
   const confirmedRequest = requests.find(r => r.status === 'confirmed');
@@ -137,7 +138,7 @@ export default async function ClientSchedulePage({ params }: { params: { id: str
             <p className="text-sm text-muted-foreground mb-5">
               Provide up to three preferred dates. Our dispatcher will confirm the final date within 1 business day.
             </p>
-            <SchedulingRequestForm jobId={params.id} />
+            <SchedulingRequestForm jobId={id} />
           </CardContent>
         </Card>
       )}

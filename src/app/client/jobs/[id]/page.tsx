@@ -21,7 +21,8 @@ import {
 
 export const metadata: Metadata = { title: 'Job Detail' };
 
-export default async function ClientJobDetailPage({ params }: { params: { id: string } }) {
+export default async function ClientJobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const user = await requireUser();
   if (!user.accountId) notFound();
 
@@ -42,7 +43,7 @@ export default async function ClientJobDetailPage({ params }: { params: { id: st
     .from(jobs)
     .leftJoin(accounts, eq(jobs.accountId, accounts.id))
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
-    .where(and(eq(jobs.id, params.id), eq(jobs.accountId, user.accountId)))
+    .where(and(eq(jobs.id, id), eq(jobs.accountId, user.accountId)))
     .limit(1);
 
   if (!jobResult[0]) notFound();
@@ -59,11 +60,11 @@ export default async function ClientJobDetailPage({ params }: { params: { id: st
       sentAt: proposals.sentAt,
     })
     .from(proposals)
-    .where(eq(proposals.jobId, params.id))
+    .where(eq(proposals.jobId, id))
     .orderBy(desc(proposals.createdAt)),
 
     db.query.schedulingRequests.findFirst({
-      where: eq(schedulingRequests.jobId, params.id),
+      where: eq(schedulingRequests.jobId, id),
       orderBy: (sr, { desc }) => [desc(sr.createdAt)],
     }),
 
@@ -73,7 +74,7 @@ export default async function ClientJobDetailPage({ params }: { params: { id: st
     })
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.actorId, users.id))
-    .where(eq(activityLogs.entityId, params.id))
+    .where(eq(activityLogs.entityId, id))
     .orderBy(desc(activityLogs.createdAt))
     .limit(8),
   ]);
@@ -203,7 +204,7 @@ export default async function ClientJobDetailPage({ params }: { params: { id: st
                     Your proposal has been approved. Please request your preferred work dates.
                   </p>
                   <Button asChild size="sm">
-                    <Link href={`/client/schedule/${params.id}`}>
+                    <Link href={`/client/schedule/${id}`}>
                       <Calendar className="h-4 w-4 mr-1.5" />
                       Request Scheduling
                     </Link>

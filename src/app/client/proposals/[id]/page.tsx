@@ -12,7 +12,8 @@ import ClientProposalActions from './ClientProposalActions';
 
 export const metadata: Metadata = { title: 'Your Proposal' };
 
-export default async function ClientProposalPage({ params }: { params: { id: string } }) {
+export default async function ClientProposalPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const user = await requireUser();
   if (!user.accountId) notFound();
 
@@ -27,7 +28,7 @@ export default async function ClientProposalPage({ params }: { params: { id: str
     .leftJoin(jobs, eq(proposals.jobId, jobs.id))
     .leftJoin(accounts, eq(jobs.accountId, accounts.id))
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
-    .where(eq(proposals.id, params.id))
+    .where(eq(proposals.id, id))
     .limit(1);
 
   if (!result[0]) notFound();

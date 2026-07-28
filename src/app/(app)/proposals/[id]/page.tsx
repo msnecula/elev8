@@ -13,9 +13,10 @@ import ProposalActions from './ProposalActions';
 
 export const metadata: Metadata = { title: 'Proposal' };
 
-export default async function ProposalDetailPage({ params }: { params: { id: string } }) {
+export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const currentUser = await requireUser();
-  if (currentUser.role === 'client') redirect(`/client/proposals/${params.id}`);
+  if (currentUser.role === 'client') redirect(`/client/proposals/${id}`);
 
   const result = await db
     .select({
@@ -30,7 +31,7 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
     .leftJoin(accounts, eq(jobs.accountId, accounts.id))
     .leftJoin(properties, eq(jobs.propertyId, properties.id))
     .leftJoin(users, eq(proposals.draftedBy, users.id))
-    .where(eq(proposals.id, params.id))
+    .where(eq(proposals.id, id))
     .limit(1);
 
   if (!result[0]) notFound();

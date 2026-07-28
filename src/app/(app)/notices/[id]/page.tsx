@@ -16,7 +16,8 @@ import NoticeActions from './NoticeActions';
 
 export const metadata: Metadata = { title: 'Notice Detail' };
 
-export default async function NoticeDetailPage({ params }: { params: { id: string } }) {
+export default async function NoticeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const currentUser = await requireRole('admin', 'reviewer', 'dispatcher');
 
   const result = await db
@@ -30,7 +31,7 @@ export default async function NoticeDetailPage({ params }: { params: { id: strin
     .leftJoin(accounts, eq(notices.accountId, accounts.id))
     .leftJoin(properties, eq(notices.propertyId, properties.id))
     .leftJoin(users, eq(notices.assignedReviewerId, users.id))
-    .where(eq(notices.id, params.id))
+    .where(eq(notices.id, id))
     .limit(1);
 
   if (!result[0]) notFound();
@@ -39,7 +40,7 @@ export default async function NoticeDetailPage({ params }: { params: { id: strin
   const linkedJobs = await db
     .select({ id: jobs.id, title: jobs.title, stage: jobs.stage, urgency: jobs.urgency })
     .from(jobs)
-    .where(eq(jobs.noticeId, params.id));
+    .where(eq(jobs.noticeId, id));
 
   return (
     <div className="space-y-6">

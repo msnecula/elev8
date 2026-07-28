@@ -96,7 +96,7 @@ export async function triggerNoticeParsing(
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const { text, error: extractError } = await extractPdfText(buffer);
+    const { text, error: extractError } = await extractPdfText(buffer, notice.mimeType ?? 'application/pdf');
     if (extractError || !text) {
       throw new Error(extractError ?? 'PDF text extraction returned empty result');
     }

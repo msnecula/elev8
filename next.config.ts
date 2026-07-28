@@ -1,9 +1,9 @@
-﻿import type { NextConfig } from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
-  serverExternalPackages: ['pdf-parse', '@napi-rs/canvas', 'pdfjs-dist', 'canvas', 'heic-convert'],
+  serverExternalPackages: ['pdf-parse', 'heic-convert', 'sharp'],
   images: {
     remotePatterns: [
       {

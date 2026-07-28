@@ -1,17 +1,21 @@
 import 'server-only';
 
-const SUPPORTED_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-];
+const MAX_IMAGES = 10; // Max embedded images to extract and send to vision
 
-const MAX_PDF_PAGES = 10; // Process up to 10 pages
-
+/**
+ * Extracts text from a document (PDF, JPEG, PNG, HEIC, WebP).
+ * 
+ * Strategy for PDFs:
+ * 1. pdf-parse — fast, free, works for text-based PDFs
+ * 2. Embedded image extraction — extracts JPEG/PNG images from the PDF binary
+ *    and sends them to OpenAI vision (works for scanned PDFs)
+ *
+ * Strategy for images (JPEG, PNG, WebP):
+ * - Sent directly to OpenAI GPT-4o vision
+ *
+ * Strategy for HEIC/HEIF (iPhone photos):
+ * - Converted to JPEG using heic-convert, then sent to OpenAI vision
+ */
 export async function extractPdfText(
   input: Buffer | string,
   mimeType = 'application/pdf',
@@ -22,13 +26,11 @@ export async function extractPdfText(
 }> {
   let buffer: Buffer;
 
-  // Download from Supabase if file path given
   if (typeof input === 'string') {
     try {
       const { createServiceClient } = await import('@/lib/supabase/server');
       const supabase = createServiceClient();
-      const bucket = 'notices';
-      const { data, error } = await supabase.storage.from(bucket).download(input);
+      const { data, error } = await supabase.storage.from('notices').download(input);
       if (error || !data) throw new Error(error?.message ?? 'Download failed');
       buffer = Buffer.from(await data.arrayBuffer());
     } catch (err) {
@@ -44,48 +46,50 @@ export async function extractPdfText(
 
   const type = mimeType.toLowerCase();
 
-  // ── Images: send directly to OpenAI vision ───────────────────────────────
+  // ── Direct image types → OpenAI vision ───────────────────────────────────
   if (['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(type)) {
-    return extractFromImage(buffer, type);
+    return sendImageToVision(buffer, type);
   }
 
-  // ── HEIC/HEIF (iPhone photos): convert to JPEG first ─────────────────────
+  // ── HEIC/HEIF (iPhone) → convert to JPEG → OpenAI vision ─────────────────
   if (['image/heic', 'image/heif'].includes(type)) {
     try {
       const heicConvert = (await import('heic-convert')).default;
       const jpegBuffer = Buffer.from(
-        await heicConvert({ buffer, format: 'JPEG', quality: 0.95 })
+        await heicConvert({ buffer, format: 'JPEG', quality: 0.92 })
       );
-      return extractFromImage(jpegBuffer, 'image/jpeg');
+      return sendImageToVision(jpegBuffer, 'image/jpeg');
     } catch (err) {
-      console.warn('[extractor] HEIC conversion failed, trying direct vision:', err);
-      return extractFromImage(buffer, 'image/jpeg');
+      console.warn('[extractor] HEIC conversion failed:', err);
+      // Try sending raw buffer anyway
+      return sendImageToVision(buffer, 'image/jpeg');
     }
   }
 
   // ── PDF ───────────────────────────────────────────────────────────────────
 
-  // Strategy 1: pdf-parse (fast, free — works for text-based PDFs)
+  // Strategy 1: pdf-parse — works for digital/text-based PDFs
   try {
     const pdfParse = (await import('pdf-parse')).default;
     const result = await pdfParse(buffer);
     const text = result.text?.trim() ?? '';
     if (text.length > 100) {
-      console.log(`[extractor] pdf-parse: extracted ${text.length} chars from ${result.numpages} pages`);
+      console.log(`[extractor] pdf-parse: ${text.length} chars, ${result.numpages} pages`);
       return { text, error: null, method: 'pdf-parse' };
     }
-    console.log('[extractor] pdf-parse found no text, trying vision fallback…');
+    console.log('[extractor] pdf-parse: insufficient text, trying image extraction…');
   } catch (err) {
     console.warn('[extractor] pdf-parse failed:', err instanceof Error ? err.message : err);
   }
 
-  // Strategy 2: Render PDF pages to PNG → OpenAI vision (handles scanned PDFs)
-  return extractFromPdfViaVision(buffer);
+  // Strategy 2: Extract embedded images from PDF binary → OpenAI vision
+  // Most scanned PDFs are just wrappers around JPEG images
+  return extractEmbeddedImagesAndOcr(buffer);
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Vision helpers ────────────────────────────────────────────────────────────
 
-async function extractFromImage(
+async function sendImageToVision(
   buffer: Buffer,
   mimeType: string,
 ): Promise<{ text: string; error: string | null; method: 'openai-vision' | 'none' }> {
@@ -101,10 +105,7 @@ async function extractFromImage(
         content: [
           {
             type: 'text',
-            text: `This is an elevator compliance document image (Order to Comply / inspection notice).
-Extract ALL visible text exactly as it appears.
-Include: property address, building name, violation items, violation codes, deadlines, inspection dates, case numbers, names, phone numbers, and any other relevant compliance information.
-Output only the raw extracted text with no formatting or commentary.`,
+            text: 'This is an elevator compliance document. Extract ALL visible text exactly as it appears. Include: property address, building name, violations, violation codes, deadlines, inspection dates, case numbers, names, phone numbers. Output raw text only, no commentary.',
           },
           {
             type: 'image_url',
@@ -118,29 +119,44 @@ Output only the raw extracted text with no formatting or commentary.`,
     });
 
     const text = response.choices[0]?.message?.content ?? '';
-    if (text.length > 50) {
-      return { text, error: null, method: 'openai-vision' };
-    }
+    if (text.length > 50) return { text, error: null, method: 'openai-vision' };
     return { text: '', error: 'Could not extract readable text from this image.', method: 'none' };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return { text: '', error: `Vision extraction failed: ${message}`, method: 'none' };
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return { text: '', error: `Vision extraction failed: ${msg}`, method: 'none' };
   }
 }
 
-async function extractFromPdfViaVision(
-  buffer: Buffer,
+/**
+ * Extracts embedded JPEG/PNG images from a PDF binary buffer.
+ * Works for scanned PDFs which are typically just wrappers around images.
+ * Does NOT require pdfjs, canvas, or any system libraries.
+ */
+async function extractEmbeddedImagesAndOcr(
+  pdfBuffer: Buffer,
 ): Promise<{ text: string; error: string | null; method: 'openai-vision' | 'none' }> {
+  const images = extractImagesFromPdfBuffer(pdfBuffer);
+
+  if (images.length === 0) {
+    return {
+      text: '',
+      error: 'No readable text or embedded images found in this PDF. Please upload a photo (JPG/PNG) of the document instead.',
+      method: 'none',
+    };
+  }
+
+  console.log(`[extractor] Found ${images.length} embedded image(s) in PDF`);
+
   try {
-    const images = await renderPdfToImages(buffer);
-
-    if (images.length === 0) {
-      return { text: '', error: 'Could not render PDF pages to images.', method: 'none' };
-    }
-
     const { openai } = await import('@/lib/openai');
 
-    console.log(`[extractor] Sending ${images.length} PDF page(s) to OpenAI vision…`);
+    const imageContent = images.slice(0, MAX_IMAGES).map(img => ({
+      type: 'image_url' as const,
+      image_url: {
+        url: `data:${img.mimeType};base64,${img.buffer.toString('base64')}`,
+        detail: 'high' as const,
+      },
+    }));
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -150,18 +166,9 @@ async function extractFromPdfViaVision(
         content: [
           {
             type: 'text',
-            text: `This is a scanned elevator compliance document (${images.length} page${images.length > 1 ? 's' : ''}).
-Extract ALL visible text from every page exactly as it appears.
-Include: property address, building name, violation items, violation codes, deadlines, inspection dates, case numbers, names, phone numbers, and any other relevant compliance information.
-Output only the raw extracted text with no formatting or commentary.`,
+            text: `This is a scanned elevator compliance document (${images.length} page${images.length > 1 ? 's' : ''}). Extract ALL text from every page. Include: property address, building name, violations, codes, deadlines, inspection dates, case numbers, names, and phone numbers. Output raw text only.`,
           },
-          ...images.map(base64 => ({
-            type: 'image_url' as const,
-            image_url: {
-              url: `data:image/png;base64,${base64}`,
-              detail: 'high' as const,
-            },
-          })),
+          ...imageContent,
         ],
       }],
     });
@@ -170,45 +177,92 @@ Output only the raw extracted text with no formatting or commentary.`,
     if (text.length > 50) {
       return { text, error: null, method: 'openai-vision' };
     }
-    return { text: '', error: 'Could not extract readable text from this PDF.', method: 'none' };
+    return {
+      text: '',
+      error: 'Could not extract text from this PDF. Please try uploading a JPG photo of the document.',
+      method: 'none',
+    };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.warn('[extractor] PDF vision fallback failed:', message);
-    return { text: '', error: `Could not extract text from this PDF: ${message}`, method: 'none' };
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return { text: '', error: `Vision OCR failed: ${msg}`, method: 'none' };
   }
 }
 
-async function renderPdfToImages(buffer: Buffer): Promise<string[]> {
-  const pdfjsLib = await import('pdfjs-dist');
-  const { createCanvas } = await import('@napi-rs/canvas');
+/**
+ * Extracts embedded JPEG and PNG images from a raw PDF buffer.
+ * Uses magic byte detection — no libraries needed.
+ */
+function extractImagesFromPdfBuffer(
+  buffer: Buffer,
+): Array<{ buffer: Buffer; mimeType: string }> {
+  const images: Array<{ buffer: Buffer; mimeType: string }> = [];
 
-  const pdfDocument = await pdfjsLib.getDocument({
-    data: new Uint8Array(buffer),
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    useSystemFonts: true,
-  }).promise;
+  // JPEG: starts with FF D8 FF, ends with FF D9
+  let offset = 0;
+  while (offset < buffer.length - 3) {
+    // Detect JPEG start
+    if (
+      buffer[offset] === 0xFF &&
+      buffer[offset + 1] === 0xD8 &&
+      buffer[offset + 2] === 0xFF
+    ) {
+      // Find JPEG end marker FF D9
+      let end = offset + 3;
+      let found = false;
+      while (end < buffer.length - 1) {
+        if (buffer[end] === 0xFF && buffer[end + 1] === 0xD9) {
+          end += 2;
+          found = true;
+          break;
+        }
+        end++;
+      }
+      if (found && end - offset > 1000) { // Skip tiny/invalid JPEGs
+        images.push({
+          buffer: buffer.slice(offset, end),
+          mimeType: 'image/jpeg',
+        });
+        if (images.length >= MAX_IMAGES) break;
+      }
+      offset = found ? end : offset + 1;
+    } else {
+      offset++;
+    }
+  }
 
-  const images: string[] = [];
-  const totalPages = pdfDocument.numPages;
-  const pagesToProcess = Math.min(totalPages, MAX_PDF_PAGES);
-
-  console.log(`[extractor] PDF has ${totalPages} page(s), processing ${pagesToProcess}`);
-
-  for (let pageNum = 1; pageNum <= pagesToProcess; pageNum++) {
-    const page = await pdfDocument.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 2.0 }); // 2x for better OCR
-
-    const canvas = createCanvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
-
-    await page.render({
-      canvasContext: context as unknown as CanvasRenderingContext2D,
-      viewport,
-    }).promise;
-
-    const base64 = canvas.toBuffer('image/png').toString('base64');
-    images.push(base64);
+  // PNG: starts with 89 50 4E 47 0D 0A 1A 0A
+  offset = 0;
+  while (offset < buffer.length - 8 && images.length < MAX_IMAGES) {
+    if (
+      buffer[offset] === 0x89 &&
+      buffer[offset + 1] === 0x50 &&
+      buffer[offset + 2] === 0x4E &&
+      buffer[offset + 3] === 0x47
+    ) {
+      // Find PNG IEND chunk (49 45 4E 44 AE 42 60 82)
+      let end = offset + 8;
+      let found = false;
+      while (end < buffer.length - 8) {
+        if (
+          buffer[end] === 0x49 && buffer[end + 1] === 0x45 &&
+          buffer[end + 2] === 0x4E && buffer[end + 3] === 0x44
+        ) {
+          end += 8; // IEND + CRC
+          found = true;
+          break;
+        }
+        end++;
+      }
+      if (found && end - offset > 1000) {
+        images.push({
+          buffer: buffer.slice(offset, end),
+          mimeType: 'image/png',
+        });
+      }
+      offset = found ? end : offset + 1;
+    } else {
+      offset++;
+    }
   }
 
   return images;

@@ -180,7 +180,7 @@ Output only the raw extracted text with no formatting or commentary.`,
 
 async function renderPdfToImages(buffer: Buffer): Promise<string[]> {
   const pdfjsLib = await import('pdfjs-dist');
-  const { createCanvas } = await import('canvas');
+  const { createCanvas } = await import('@napi-rs/canvas');
 
   const pdfDocument = await pdfjsLib.getDocument({
     data: new Uint8Array(buffer),

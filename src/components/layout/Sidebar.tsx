@@ -8,7 +8,7 @@ import { APP_NAME } from '@/lib/constants';
 import type { UserRole } from '@/types/auth';
 import {
   FileText, Briefcase, Truck, ClipboardList,
-  Settings, LogOut, Bell, Calendar,
+  Settings, LogOut, Bell, Calendar, FolderOpen,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dispatch', href: '/dispatch', icon: Truck, roles: ['admin', 'dispatcher'] },
   { label: 'Work Orders', href: '/work-orders', icon: ClipboardList, roles: ['admin', 'dispatcher'], matchPrefix: true },
   { label: 'My Work', href: '/technician', icon: ClipboardList, roles: ['technician'], matchPrefix: true },
+  { label: 'Documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'dispatcher'], matchPrefix: true },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 

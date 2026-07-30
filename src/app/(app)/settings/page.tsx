@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ROLE_LABELS } from '@/lib/constants';
 import InviteClientForm from './InviteClientForm';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { FileText, ExternalLink } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -34,6 +37,28 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Settings" description="Manage users and system configuration" />
+
+      {/* Form Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Official Cal/OSHA Form Templates
+            </span>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings/forms">
+                Manage Form Templates
+                <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </Link>
+            </Button>
+          </CardTitle>
+          <CardDescription>
+            Upload official PDFs from dir.ca.gov so the system can auto-fill EU-632, EU-787, DOSH-100, and other Cal/OSHA forms.
+            When the state releases a new form version, upload the updated PDF here.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       {/* Invite client */}
       <Card>

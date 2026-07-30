@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireRole } from '@/lib/auth';
 import { db } from '@/server/db/client';
-import { jobs, accounts, properties, users } from '@/drizzle/schema';
+import { jobs, accounts, properties, users, proposals } from '@/drizzle/schema';
 import { desc, eq } from 'drizzle-orm';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -14,6 +14,22 @@ export const metadata: Metadata = { title: 'Jobs' };
 
 export default async function JobsPage() {
   await requireRole('admin', 'reviewer', 'dispatcher');
+
+  // Proposals with client revision requests
+  const revisionJobs = await db
+    .select({
+      jobId: proposals.jobId,
+      proposalId: proposals.id,
+      revisionNotes: proposals.revisionNotes,
+      jobTitle: jobs.title,
+      accountName: accounts.name,
+    })
+    .from(proposals)
+    .leftJoin(jobs, eq(proposals.jobId, jobs.id))
+    .leftJoin(accounts, eq(jobs.accountId, accounts.id))
+    .where(eq(proposals.status, 'revision_requested'))
+    .orderBy(desc(proposals.updatedAt))
+    .limit(10);
 
   const allJobs = await db
     .select({
@@ -57,7 +73,32 @@ export default async function JobsPage() {
       </PageHeader>
 
       {allJobs.length === 0 ? (
-        <EmptyState
+        {/* Revisions requested */}
+      {revisionJobs.length > 0 && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 space-y-2">
+          <p className="text-sm font-semibold text-purple-800">
+            ✏️ {revisionJobs.length} Proposal{revisionJobs.length !== 1 ? 's' : ''} — Client Requested Changes
+          </p>
+          <div className="space-y-1.5">
+            {revisionJobs.map(r => (
+              <div key={r.proposalId} className="flex items-center justify-between text-sm bg-white rounded border border-purple-200 px-3 py-2 gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{r.jobTitle ?? 'Job'}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{r.accountName}</span>
+                  {r.revisionNotes && (
+                    <p className="text-xs text-purple-700 mt-0.5 truncate">"{r.revisionNotes}"</p>
+                  )}
+                </div>
+                <Link href={`/proposals/${r.proposalId}`} className="text-xs text-purple-700 font-medium hover:underline shrink-0">
+                  Review & Revise →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <EmptyState
           icon={Briefcase}
           title="No jobs yet"
           description="Jobs are created automatically when a notice is parsed, or you can create one manually."

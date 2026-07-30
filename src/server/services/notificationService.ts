@@ -295,3 +295,68 @@ export async function sendInviteEmail({
     html,
   });
 }
+
+// ─── Revision request notification ───────────────────────────────────────────
+
+export async function sendRevisionRequestNotification({
+  jobId,
+  jobTitle,
+  proposalId,
+  revisionNotes,
+  clientName,
+  assignedReviewerId,
+}: {
+  jobId: string;
+  jobTitle: string;
+  proposalId: string;
+  revisionNotes: string;
+  clientName: string;
+  assignedReviewerId?: string;
+}) {
+  const { db } = await import('@/server/db/client');
+  const { users } = await import('@/drizzle/schema');
+  const { inArray, eq, and } = await import('drizzle-orm');
+
+  // Get all admins + dispatchers + the specific reviewer
+  const staffUsers = await db.query.users.findMany({
+    where: (u) => inArray(u.role, ['admin', 'dispatcher']),
+    columns: { id: true, email: true, fullName: true },
+  });
+
+  // Also get the assigned reviewer if not already in the list
+  let reviewerEmail: string | null = null;
+  if (assignedReviewerId) {
+    const reviewer = await db.query.users.findFirst({
+      where: eq(users.id, assignedReviewerId),
+      columns: { email: true, fullName: true },
+    });
+    if (reviewer && !staffUsers.find(u => u.id === assignedReviewerId)) {
+      staffUsers.push({ id: assignedReviewerId, email: reviewer.email, fullName: reviewer.fullName });
+    }
+    reviewerEmail = reviewer?.email ?? null;
+  }
+
+  const proposalUrl = `${APP_URL}/proposals/${proposalId}`;
+
+  const subject = `Revision Requested — ${jobTitle}`;
+  const body = `${clientName} has requested changes to the proposal for "${jobTitle}".
+
+Client's revision notes:
+"${revisionNotes}"
+
+Please review the proposal, make the requested changes, and resend to the client.
+
+View proposal: ${proposalUrl}`;
+
+  // Send to all relevant staff
+  await Promise.all(
+    staffUsers.map(staff =>
+      sendEmail({
+        to: staff.email,
+        subject,
+        html: buildSimpleEmail(subject, body),
+        jobId,
+      }).catch(err => console.error(`Failed to notify ${staff.email}:`, err))
+    )
+  );
+}

@@ -360,6 +360,25 @@ export async function requestRevision(
   await logJobActivity(proposal.jobId, 'revision_requested',
     `Revision requested: ${parsed.data.revisionNotes}`, user.id);
 
+  // Notify reviewer, dispatchers, and admins
+  try {
+    const job = await db.query.jobs.findFirst({
+      where: eq(jobs.id, proposal.jobId),
+      columns: { title: true, assignedReviewerId: true },
+    });
+    const { sendRevisionRequestNotification } = await import('@/server/services/notificationService');
+    await sendRevisionRequestNotification({
+      jobId: proposal.jobId,
+      jobTitle: job?.title ?? 'Job',
+      proposalId: proposal.id,
+      revisionNotes: parsed.data.revisionNotes,
+      clientName: user.fullName ?? 'Client',
+      assignedReviewerId: job?.assignedReviewerId ?? undefined,
+    });
+  } catch (err) {
+    console.error('[proposals] Revision notification failed:', err);
+  }
+
   revalidatePath(`/proposals/${proposal.id}`);
   revalidatePath(`/jobs/${proposal.jobId}`);
   revalidatePath(`/client/proposals/${proposal.id}`);

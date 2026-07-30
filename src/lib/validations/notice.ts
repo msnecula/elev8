@@ -1,13 +1,24 @@
 import { z } from 'zod';
 
+const ACCEPTED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const;
+
 export const noticeUploadSchema = z.object({
   propertyId: z.string().uuid().optional(),
   accountId: z.string().uuid('Account is required'),
   fileName: z.string().min(1, 'File name is required'),
-  fileSize: z.number().max(20 * 1024 * 1024, 'File must be under 20 MB'),
-  mimeType: z.literal('application/pdf', {
-    errorMap: () => ({ message: 'Only PDF files are accepted' }),
-  }),
+  fileSize: z.number().max(25 * 1024 * 1024, 'File must be under 25 MB'),
+  mimeType: z.string().refine(
+    (val) => ACCEPTED_MIME_TYPES.includes(val as any) || val.startsWith('image/'),
+    { message: 'Accepted formats: PDF, JPG, PNG, WebP, HEIC' },
+  ),
   filePath: z.string().min(1, 'File path is required'),
 });
 

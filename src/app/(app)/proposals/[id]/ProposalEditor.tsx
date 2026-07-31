@@ -142,12 +142,12 @@ export default function ProposalEditor({
             </div>
             <div className="flex items-center gap-2">
               {templates.length > 0 && (
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <Select value={selectedTemplate} onValueChange={(v) => setSelectedTemplate(v === "none" ? "" : v)}>
                   <SelectTrigger className="w-[180px] h-8 text-xs bg-white">
                     <SelectValue placeholder="Select template…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No template</SelectItem>
+                    <SelectItem value="none">No template</SelectItem>
                     {templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

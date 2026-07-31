@@ -44,7 +44,6 @@ export default async function JobsPage() {
       createdAt: jobs.createdAt,
       accountName: accounts.name,
       propertyName: properties.name,
-      propertyCity: properties.city,
       reviewerName: users.fullName,
     })
     .from(jobs)
@@ -54,7 +53,6 @@ export default async function JobsPage() {
     .orderBy(desc(jobs.createdAt))
     .limit(200);
 
-  // Compute summary counts
   const activeCount = allJobs.filter((j) => !['completed', 'cancelled'].includes(j.stage)).length;
   const criticalCount = allJobs.filter((j) => j.urgency === 'critical').length;
 
@@ -72,10 +70,9 @@ export default async function JobsPage() {
         </div>
       </PageHeader>
 
-      {allJobs.length === 0 ? (
-        {/* Revisions requested */}
+      {/* Revision requests banner */}
       {revisionJobs.length > 0 && (
-        <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 space-y-2">
+        <div className="mt-6 rounded-lg border border-purple-200 bg-purple-50 p-4 space-y-2">
           <p className="text-sm font-semibold text-purple-800">
             ✏️ {revisionJobs.length} Proposal{revisionJobs.length !== 1 ? 's' : ''} — Client Requested Changes
           </p>
@@ -98,83 +95,81 @@ export default async function JobsPage() {
         </div>
       )}
 
-      <EmptyState
-          icon={Briefcase}
-          title="No jobs yet"
-          description="Jobs are created automatically when a notice is parsed, or you can create one manually."
-        />
-      ) : (
-        <div className="rounded-lg border border-border overflow-hidden bg-card">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/40 border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Job</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Stage</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Urgency</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reviewer</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Next Action</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allJobs.map((job) => {
-                const flags = (job.riskFlags as string[]) ?? [];
-                const isOverdue = job.nextActionDate && new Date(job.nextActionDate) < new Date();
-
-                return (
-                  <tr
-                    key={job.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <Link href={`/jobs/${job.id}`} className="block hover:text-blue-600">
-                        <div className="font-medium text-foreground">
-                          {job.title ?? 'Untitled Job'}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {job.accountName ?? '—'}
-                          {job.propertyCity ? ` · ${job.propertyCity}` : ''}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge variant="job_stage" value={job.stage} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge variant="urgency" value={job.urgency} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {job.reviewerName ?? 'Unassigned'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {job.nextActionDate ? (
-                        <span className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-foreground'}`}>
-                          {isOverdue ? '⚠ ' : ''}{formatDate(job.nextActionDate)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {job.fortyEightHourRequired && (
-                          <span className="text-xs bg-orange-100 text-orange-700 border border-orange-200 rounded px-1.5 py-0.5">48hr</span>
+      <div className="mt-6">
+        {allJobs.length === 0 ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No jobs yet"
+            description="Jobs are created automatically when a notice is parsed, or you can create one manually."
+          />
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden bg-card">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border">
+                  {['Job', 'Account / Property', 'Stage', 'Urgency', 'Reviewer', 'Created', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allJobs.map((job) => {
+                  const riskFlags = (job.riskFlags as string[]) ?? [];
+                  const isCritical = job.urgency === 'critical';
+                  const hasRisk = riskFlags.length > 0;
+                  return (
+                    <tr
+                      key={job.id}
+                      className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${
+                        isCritical ? 'bg-red-50/40' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{job.title ?? 'Untitled Job'}</div>
+                        {hasRisk && (
+                          <div className="flex gap-1 mt-0.5 flex-wrap">
+                            {riskFlags.slice(0, 2).map((flag) => (
+                              <span key={flag} className="text-xs bg-red-100 text-red-700 rounded px-1.5 py-0.5 capitalize">
+                                {flag.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                          </div>
                         )}
-                        {job.complianceCoordinationRequired && (
-                          <span className="text-xs bg-purple-100 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">Compliance</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm">{job.accountName ?? '—'}</div>
+                        {job.propertyName && (
+                          <div className="text-xs text-muted-foreground">{job.propertyName}</div>
                         )}
-                        {flags.map((f) => (
-                          <span key={f} className="text-xs bg-red-100 text-red-700 border border-red-200 rounded px-1.5 py-0.5">{f}</span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant="job_stage" value={job.stage} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant="urgency" value={job.urgency} />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {job.reviewerName ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {formatDate(job.createdAt)}
+                      </td>
+                      <td className="px-4 py-2 pr-4">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                        >
+                          View →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

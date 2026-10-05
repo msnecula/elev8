@@ -170,16 +170,17 @@ export async function sendProposal(proposalId: string): Promise<ActionResult<voi
     return { success: false, error: 'Only draft or revision-requested proposals can be sent' };
   }
 
-  // Get job + account + contact email
+  // Get job + account + property + contact email
   const jobResult = await db
-    .select({ job: jobs, account: accounts })
+    .select({ job: jobs, account: accounts, property: properties })
     .from(jobs)
     .leftJoin(accounts, eq(jobs.accountId, accounts.id))
+    .leftJoin(properties, eq(jobs.propertyId, properties.id))
     .where(eq(jobs.id, proposal.jobId))
     .limit(1);
 
   if (!jobResult[0]) return { success: false, error: 'Job not found' };
-  const { job, account } = jobResult[0];
+  const { job, account, property } = jobResult[0];
 
   const contact = await db.query.contacts.findFirst({
     where: and(eq(contacts.accountId, job.accountId), eq(contacts.isPrimary, true)),

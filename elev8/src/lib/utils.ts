@@ -92,3 +92,17 @@ export function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
+/** Generate a job title from notice type and property info */
+export function generateJobTitle(
+  noticeType: string,
+  propertyName?: string | null
+): string {
+  const type = noticeType
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  if (propertyName) {
+    return `${type} – ${propertyName}`;
+  }
+  return type;
+}

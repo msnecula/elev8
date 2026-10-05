@@ -1,3 +1,5 @@
+'use client';
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -34,7 +36,3 @@ export default function OfflinePage() {
     </div>
   );
 }
-
-export const metadata = {
-  title: 'Offline | Elev8 Comply',
-};

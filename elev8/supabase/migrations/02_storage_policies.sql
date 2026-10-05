@@ -1,0 +1,3 @@
+-- See Phase 2 output for full storage policies.
+-- Run AFTER 01_rls_policies.sql
+-- Paste the full contents from the Phase 2 storage policies file here.

@@ -1,0 +1,3 @@
+-- Full SQL migration from Phase 2.
+-- Run this in Supabase SQL Editor AFTER 00_extensions.sql
+-- Paste the full 0000_initial.sql contents from Phase 2 here.

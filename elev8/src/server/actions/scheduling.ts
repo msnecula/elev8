@@ -3,9 +3,9 @@
 import { requireUser, requireRole } from '@/lib/auth';
 import { db } from '@/server/db/client';
 import {
-  schedulingRequests, jobs, accounts, contacts, properties, workOrders,
+  schedulingRequests, jobs, accounts, contacts, properties, workOrders, users,
 } from '@/drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { logJobActivity } from '@/server/services/activityLogger';
 import { sendEmail, buildSimpleEmail, sendSchedulingConfirmEmail } from '@/server/services/notificationService';
@@ -95,6 +95,26 @@ export async function requestScheduling(
     `Scheduling requested by client. Preferred dates: ${parsed.data.preferredDate1}${parsed.data.preferredDate2 ? ', ' + parsed.data.preferredDate2 : ''}${parsed.data.preferredDate3 ? ', ' + parsed.data.preferredDate3 : ''}`,
     user.id,
   );
+
+  // Notify dispatchers/admins of new scheduling request
+  const jobUrl = `${APP_URL}/schedule/${parsed.data.jobId}`;
+  const dispatchers = await db.query.users.findMany({
+    where: inArray(users.role, ['admin', 'dispatcher']),
+    columns: { email: true },
+  });
+  for (const dispatcher of dispatchers) {
+    if (dispatcher.email) {
+      await sendEmail({
+        to: dispatcher.email,
+        subject: `New Scheduling Request — ${job.title ?? 'Job'}`,
+        html: buildSimpleEmail(
+          'New Scheduling Request',
+          `A client has submitted a scheduling request.\n\nJob: ${job.title ?? 'Untitled'}\nPreferred dates: ${parsed.data.preferredDate1}${parsed.data.preferredDate2 ? ', ' + parsed.data.preferredDate2 : ''}${parsed.data.preferredDate3 ? ', ' + parsed.data.preferredDate3 : ''}${parsed.data.notes ? '\nNotes: ' + parsed.data.notes : ''}\n\nReview and confirm the date: ${jobUrl}`,
+        ),
+        jobId: parsed.data.jobId,
+      });
+    }
+  }
 
   revalidatePath(`/client/jobs/${parsed.data.jobId}`);
   revalidatePath(`/client/schedule/${parsed.data.jobId}`);
@@ -187,31 +207,34 @@ export async function confirmScheduling(
   // Notify client via email
   const job = await db.query.jobs.findFirst({
     where: eq(jobs.id, request.jobId),
-    columns: { accountId: true, title: true, complianceCoordinationRequired: true },
+    columns: { accountId: true, title: true, complianceCoordinationRequired: true, propertyId: true },
   });
 
   if (job) {
-    const contact = await db.query.contacts.findFirst({
-      where: and(eq(contacts.accountId, job.accountId), eq(contacts.isPrimary, true)),
-      columns: { email: true, fullName: true },
-    });
+    const [contact, property] = await Promise.all([
+      db.query.contacts.findFirst({
+        where: and(eq(contacts.accountId, job.accountId), eq(contacts.isPrimary, true)),
+        columns: { email: true, fullName: true },
+      }),
+      job.propertyId
+        ? db.query.properties.findFirst({
+            where: eq(properties.id, job.propertyId),
+            columns: { name: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (contact?.email) {
-      const jobUrl = `${APP_URL}/client/jobs/${request.jobId}`;
-      const accessNotes = parsed.data.buildingAccessNotes
-        ? `\nBuilding Access: ${parsed.data.buildingAccessNotes}`
-        : '';
-      const complianceNote = job.complianceCoordinationRequired
-        ? '\n\nNote: This job requires compliance coordination. Our team will be in touch with your compliance company.'
-        : '';
-
-      await sendEmail({
+      await sendSchedulingConfirmEmail({
         to: contact.email,
-        subject: `Work Date Confirmed — ${job.title ?? 'Your Job'}`,
-        html: buildSimpleEmail(
-          'Your work date has been confirmed',
-          `Dear ${contact.fullName},\n\nYour elevator compliance work has been scheduled.\n\nDate: ${formatDate(confirmedStart, 'EEEE, MMMM d, yyyy')}\nTime: ${formatDate(confirmedStart, 'h:mm a')} – ${formatDate(confirmedEnd, 'h:mm a')}${accessNotes}${complianceNote}\n\nView your job status: ${jobUrl}\n\nIf you need to reschedule, please contact us as soon as possible.`,
-        ),
+        clientName: contact.fullName,
+        jobTitle: job.title ?? 'Elevator Compliance Job',
+        propertyName: property?.name ?? 'your property',
+        confirmedStart,
+        confirmedEnd,
+        buildingAccessNotes: parsed.data.buildingAccessNotes,
+        complianceCoordinationRequired: job.complianceCoordinationRequired ?? false,
+        fortyEightHourRequired: existingWO?.fortyEightHourNoticeRequired ?? false,
         jobId: request.jobId,
       });
     }

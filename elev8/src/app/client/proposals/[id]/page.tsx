@@ -110,6 +110,7 @@ export default async function ClientProposalPage({ params }: { params: Promise<{
           {/* Client actions */}
           <ClientProposalActions
             proposalId={proposal.id}
+            jobId={job?.id ?? ''}
             status={proposal.status}
           />
 

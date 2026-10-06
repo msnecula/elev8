@@ -27,6 +27,7 @@ type FormValues = z.infer<typeof schema>;
 
 interface ConfirmDateFormProps {
   requestId: string;
+  jobId: string;
   preferredDate1?: string | null;
   preferredDate2?: string | null;
   preferredDate3?: string | null;
@@ -36,7 +37,7 @@ interface ConfirmDateFormProps {
 }
 
 export default function ConfirmDateForm({
-  requestId, preferredDate1, preferredDate2, preferredDate3,
+  requestId, jobId, preferredDate1, preferredDate2, preferredDate3,
   notes, complianceRequired, onConfirmed,
 }: ConfirmDateFormProps) {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function ConfirmDateForm({
       if (result.success) {
         toast.success('Date confirmed — client has been notified by email');
         onConfirmed?.();
-        router.refresh();
+        router.push(`/jobs/${jobId}`);
       } else {
         toast.error(result.error);
       }

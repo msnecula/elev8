@@ -10,9 +10,11 @@ import { CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react';
 
 export default function ClientProposalActions({
   proposalId,
+  jobId,
   status,
 }: {
   proposalId: string;
+  jobId: string;
   status: string;
 }) {
   const router = useRouter();
@@ -23,10 +25,17 @@ export default function ClientProposalActions({
 
   if (status === 'approved') {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center space-y-1">
+      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center space-y-2">
         <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto" />
         <p className="text-sm font-semibold text-green-800">Proposal Approved</p>
-        <p className="text-xs text-green-700">Our team will contact you to schedule the work.</p>
+        <p className="text-xs text-green-700">Select your preferred dates to schedule the work.</p>
+        <Button
+          size="sm"
+          className="w-full bg-green-600 hover:bg-green-700 text-white mt-1"
+          onClick={() => router.push(`/client/schedule/${jobId}`)}
+        >
+          Schedule Your Job →
+        </Button>
       </div>
     );
   }
@@ -50,11 +59,15 @@ export default function ClientProposalActions({
 
   if (status !== 'sent') return null;
 
-  function act(fn: () => Promise<{ success: boolean; error?: string }>) {
+  function act(fn: () => Promise<{ success: boolean; error?: string }>, onSuccess?: () => void) {
     startTransition(async () => {
       const r = await fn();
-      if (r.success) router.refresh();
-      else toast.error(r.error ?? 'Action failed');
+      if (r.success) {
+        if (onSuccess) onSuccess();
+        else router.refresh();
+      } else {
+        toast.error(r.error ?? 'Action failed');
+      }
     });
   }
 
@@ -65,11 +78,14 @@ export default function ClientProposalActions({
       {view === 'idle' && (
         <div className="space-y-2">
           <Button className="w-full bg-green-600 hover:bg-green-700 text-white" size="sm" disabled={isPending}
-            onClick={() => act(async () => {
-              const r = await approveProposal({ proposalId });
-              if (r.success) toast.success('Proposal approved! We\'ll be in touch to schedule.');
-              return r;
-            })}>
+            onClick={() => act(
+              async () => {
+                const r = await approveProposal({ proposalId });
+                if (r.success) toast.success('Proposal approved! Select your preferred dates below.');
+                return r;
+              },
+              () => router.push(`/client/schedule/${jobId}`)
+            )}>
             {isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
             Approve Proposal
           </Button>

@@ -69,6 +69,7 @@ export default async function SchedulingPage({ params }: { params: Promise<{ id:
               <CardContent>
                 <ConfirmDateForm
                   requestId={pendingRequest.request.id}
+                  jobId={id}
                   preferredDate1={pendingRequest.request.preferredDate1}
                   preferredDate2={pendingRequest.request.preferredDate2}
                   preferredDate3={pendingRequest.request.preferredDate3}

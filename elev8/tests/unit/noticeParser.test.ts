@@ -67,7 +67,7 @@ describe('parseNoticeWithAI', () => {
     const { data, error } = await parseNoticeWithAI('short');
 
     expect(data).toBeNull();
-    expect(error).toContain('too short');
+    expect(error).toContain('Insufficient');
     expect(openai.chat.completions.create).not.toHaveBeenCalled();
   });
 
@@ -105,7 +105,10 @@ describe('parseNoticeWithAI', () => {
     await parseNoticeWithAI(longText);
 
     const callArgs = mockCreate.mock.calls[0][0] as { messages: Array<{ content: string }> };
-    const userMessage = callArgs.messages.find(m => m.content.includes('truncated'));
-    expect(userMessage).toBeDefined();
+    const allContent = callArgs.messages.map(m => m.content).join('');
+    // Parser caps text at 12,000 chars before calling OpenAI.
+    // 12,000 consecutive 'A's must be present; 12,001 must not.
+    expect(allContent).toContain('A'.repeat(12000));
+    expect(allContent).not.toContain('A'.repeat(12001));
   });
 });

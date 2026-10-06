@@ -156,8 +156,8 @@ async function _parseNotice(noticeId: string, actorId: string | null): Promise<s
     const reviewerId = await assignReviewer(parsedData.urgency, parsedData.buildingType);
 
     let stateDeadline: Date | null = null;
-    if (parsedData.stateDeadline) {
-      const d = new Date(parsedData.stateDeadline);
+    if (parsedData.complianceDeadline) {
+      const d = new Date(parsedData.complianceDeadline);
       if (!isNaN(d.getTime())) stateDeadline = d;
     }
 

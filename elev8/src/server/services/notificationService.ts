@@ -296,6 +296,93 @@ export async function sendInviteEmail({
   });
 }
 
+// ─── Proposal draft ready — notify reviewer ───────────────────────────────────
+
+export async function sendProposalDraftReadyEmail({
+  to,
+  reviewerName,
+  propertyName,
+  accountName,
+  urgency,
+  estimatedTotal,
+  proposalId,
+  jobId,
+}: {
+  to: string;
+  reviewerName: string;
+  propertyName: string;
+  accountName: string;
+  urgency: string;
+  estimatedTotal: number | string;
+  proposalId: string;
+  jobId: string;
+}) {
+  const urgencyColors: Record<string, string> = {
+    critical: '#dc2626',
+    urgent: '#ea580c',
+    standard: '#2563eb',
+  };
+  const urgencyColor = urgencyColors[urgency] ?? '#2563eb';
+  const proposalUrl = `${APP_URL}/proposals/${proposalId}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,sans-serif;max-width:580px;margin:0 auto;padding:40px 20px;color:#111827;">
+  <div style="border-bottom:2px solid #2563eb;padding-bottom:16px;margin-bottom:32px;">
+    <strong style="font-size:18px;color:#2563eb;">Elev8 Comply</strong>
+  </div>
+  <h2 style="margin-top:0;font-size:20px;">AI Proposal Draft Ready for Review</h2>
+  <p style="font-size:15px;color:#374151;">Hi ${reviewerName},</p>
+  <p style="font-size:15px;color:#374151;">
+    A new notice has been received and our AI has automatically drafted a proposal for your review.
+  </p>
+  <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
+    <table style="width:100%;font-size:14px;">
+      <tr>
+        <td style="color:#6b7280;padding:4px 0;width:40%;">Account</td>
+        <td style="font-weight:600;padding:4px 0;">${accountName}</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280;padding:4px 0;">Property</td>
+        <td style="font-weight:600;padding:4px 0;">${propertyName}</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280;padding:4px 0;">Urgency</td>
+        <td style="padding:4px 0;">
+          <span style="background:${urgencyColor};color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;text-transform:uppercase;">${urgency}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280;padding:4px 0;">Est. Total</td>
+        <td style="font-weight:700;font-size:16px;color:#111827;padding:4px 0;">${formatCurrency(estimatedTotal)}</td>
+      </tr>
+    </table>
+  </div>
+  <p style="font-size:14px;color:#6b7280;margin-bottom:28px;">
+    The AI has pre-filled all sections including scope of work, line items, hours, and pricing.
+    Please review and adjust any figures before sending to the client — this usually takes under a minute.
+  </p>
+  <div style="text-align:center;margin-bottom:24px;">
+    <a href="${proposalUrl}"
+       style="background:#2563eb;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px;display:inline-block;">
+      Review &amp; Send Proposal →
+    </a>
+  </div>
+  <p style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:0;">
+    Or copy: <a href="${proposalUrl}" style="color:#2563eb;">${proposalUrl}</a>
+  </p>
+  <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
+    This email was sent by Elev8 Comply. You are receiving this because you are assigned as a reviewer.
+  </div>
+</body></html>`;
+
+  return sendEmail({
+    to,
+    subject: `[${urgency.toUpperCase()}] AI Proposal Ready — ${propertyName}`,
+    html,
+    jobId,
+  });
+}
+
 // ─── Revision request notification ───────────────────────────────────────────
 
 export async function sendRevisionRequestNotification({

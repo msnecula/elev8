@@ -31,7 +31,7 @@ export async function generateAIProposal(
   jobId: string,
   templateId?: string,
 ): Promise<ActionResult<{ title: string; body: string; lineItems: unknown[]; totalAmount: number }>> {
-  await requireRole('admin', 'reviewer');
+  await requireRole('admin', 'reviewer', 'dispatcher');
 
   // Fetch everything needed for the AI prompt
   const jobResult = await db
@@ -96,7 +96,7 @@ export async function generateAIProposal(
 export async function createProposal(
   input: z.infer<typeof createProposalSchema>,
 ): Promise<ActionResult<{ proposalId: string }>> {
-  const user = await requireRole('admin', 'reviewer');
+  const user = await requireRole('admin', 'reviewer', 'dispatcher');
 
   const parsed = createProposalSchema.safeParse(input);
   if (!parsed.success) {
@@ -138,7 +138,7 @@ export async function createProposal(
 export async function updateProposal(
   input: z.infer<typeof updateProposalSchema>,
 ): Promise<ActionResult<void>> {
-  await requireRole('admin', 'reviewer');
+  await requireRole('admin', 'reviewer', 'dispatcher');
 
   const parsed = updateProposalSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid input' };
@@ -160,7 +160,7 @@ export async function updateProposal(
 // ─── Send proposal to client ──────────────────────────────────────────────────
 
 export async function sendProposal(proposalId: string): Promise<ActionResult<void>> {
-  const user = await requireRole('admin', 'reviewer');
+  const user = await requireRole('admin', 'reviewer', 'dispatcher');
 
   const proposal = await db.query.proposals.findFirst({
     where: eq(proposals.id, proposalId),

@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { db } from '../../../../server/db/client';
 import { notices, accounts } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { logNoticeActivity } from '../../../../server/services/activityLogger';
+import { parseNoticeBackground } from '@/server/actions/notices';
 
 /**
  * POST /api/webhooks/email-intake
  * Receives inbound email payloads (SendGrid Inbound Parse compatible).
  * Point your email provider inbound webhook here.
  * Protected by EMAIL_INTAKE_WEBHOOK_SECRET header.
+ *
+ * After inserting the notice record and returning a 200 immediately,
+ * `after()` fires `parseNoticeBackground` so the AI parse + proposal
+ * draft + reviewer notification all happen without blocking the webhook response.
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get('x-webhook-secret');
@@ -63,6 +69,11 @@ export async function POST(request: Request) {
     null,
     { from: senderEmail, subject, accountMatched: !!matchedAccount },
   );
+
+  // Fire AI parse + proposal generation after the response is sent.
+  // `after()` keeps the serverless function alive until the promise resolves
+  // without blocking the 200 response the webhook sender needs.
+  after(() => parseNoticeBackground(notice.id));
 
   return NextResponse.json({ received: true, noticeId: notice.id });
 }

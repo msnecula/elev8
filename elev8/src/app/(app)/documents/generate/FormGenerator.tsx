@@ -24,7 +24,7 @@ interface Props {
 export default function FormGenerator({ formType, noticeId, workOrderId, parsedData }: Props) {
   const [isPending, startTransition] = useTransition();
   const [pdfReady, setPdfReady] = useState<{ base64: string; filename: string; unfilledFields: string[] } | null>(null);
-  const [flatten, setFlatten] = useState(false);
+  const [flatten, setFlatten] = useState(true);
 
   // Extra fields specific to each form type
   const { register, handleSubmit, control } = useForm({
@@ -135,8 +135,13 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
     const a = document.createElement('a');
     a.href = url;
     a.download = pdfReady.filename;
+    // Must be in DOM for Firefox; must NOT revoke synchronously —
+    // revoking before the browser reads the blob causes "virus scan failed"
+    // on Windows because Defender can't access an already-revoked object URL.
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   return (
@@ -304,8 +309,8 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
       {/* Flatten option */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div>
-          <p className="text-sm font-medium">Flatten form fields</p>
-          <p className="text-xs text-muted-foreground">Makes the PDF non-editable after generation. Turn off if additional fields need to be filled manually.</p>
+          <p className="text-sm font-medium">Flatten form fields <span className="text-xs text-green-700 font-normal">(recommended)</span></p>
+          <p className="text-xs text-muted-foreground">Bakes values into the PDF and removes interactive scripting — prevents antivirus false positives on download. Turn off only if you need to edit fields in Acrobat after generating.</p>
         </div>
         <Switch checked={flatten} onCheckedChange={setFlatten} />
       </div>

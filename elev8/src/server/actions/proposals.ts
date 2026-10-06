@@ -6,7 +6,7 @@ import {
   proposals, jobs, notices, properties, accounts,
   contacts, proposalTemplates,
 } from '@/drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import {
   createProposalSchema,
   updateProposalSchema,
@@ -265,29 +265,41 @@ export async function approveProposal(
 
   await logJobActivity(proposal.jobId, 'proposal_approved', 'Proposal approved by client', user.id);
 
-  // Send confirmation email to client
-  const job = await db.query.jobs.findFirst({ where: eq(jobs.id, proposal.jobId), columns: { accountId: true, title: true } });
-  const contact = job ? await db.query.contacts.findFirst({
-    where: and(eq(contacts.accountId, job.accountId), eq(contacts.isPrimary, true)),
-    columns: { email: true },
-  }) : null;
+  // Send confirmation email using typed template
+  const jobForEmail = await db
+    .select({ job: jobs, account: accounts, property: properties })
+    .from(jobs)
+    .leftJoin(accounts, eq(jobs.accountId, accounts.id))
+    .leftJoin(properties, eq(jobs.propertyId, properties.id))
+    .where(eq(jobs.id, proposal.jobId))
+    .limit(1);
 
-  if (contact?.email) {
-    await sendEmail({
-      to: contact.email,
-      subject: `Proposal Approved — ${proposal.title}`,
-      html: buildSimpleEmail(
-        'Your proposal has been approved',
-        `Thank you for approving the proposal for "${job?.title ?? proposal.title}".\n\nOur team will be in touch shortly to schedule the work.\n\nIf you have any questions, please contact us.`,
-      ),
-      jobId: proposal.jobId,
+  if (jobForEmail[0]) {
+    const { job: jobData, account, property } = jobForEmail[0];
+    const contact = await db.query.contacts.findFirst({
+      where: and(eq(contacts.accountId, jobData.accountId), eq(contacts.isPrimary, true)),
+      columns: { email: true, fullName: true },
     });
+    const clientEmail = contact?.email ?? account?.email;
+    const clientName = contact?.fullName ?? account?.name ?? 'Valued Client';
+    const propertyName = property ? `${property.name}, ${property.city}` : account?.name ?? '';
+    if (clientEmail) {
+      await sendApprovalConfirmEmail({
+        to: clientEmail,
+        clientName,
+        jobTitle: proposal.title,
+        propertyName,
+        totalAmount: Number(proposal.totalAmount ?? 0),
+        jobId: proposal.jobId,
+      });
+    }
   }
 
   revalidatePath(`/proposals/${proposal.id}`);
   revalidatePath(`/jobs/${proposal.jobId}`);
   revalidatePath(`/client/proposals/${proposal.id}`);
   revalidatePath('/client/jobs');
+  revalidatePath('/client');
   return { success: true, data: undefined };
 }
 
@@ -319,12 +331,42 @@ export async function rejectProposal(
     updatedAt: new Date(),
   }).where(eq(proposals.id, proposal.id));
 
+  // Return job to under_review so staff can decide next steps
+  await db.update(jobs)
+    .set({ stage: 'under_review', updatedAt: new Date() })
+    .where(eq(jobs.id, proposal.jobId));
+
   await logJobActivity(proposal.jobId, 'proposal_rejected',
     `Proposal rejected${parsed.data.reason ? `: ${parsed.data.reason}` : ''}`, user.id);
+
+  // Notify all admins, reviewers, and dispatchers
+  try {
+    const staffUsers = await db.query.users.findMany({
+      where: (u) => inArray(u.role, ['admin', 'reviewer', 'dispatcher']),
+      columns: { email: true },
+    });
+    const jobForNotify = await db.query.jobs.findFirst({
+      where: eq(jobs.id, proposal.jobId),
+      columns: { title: true },
+    });
+    const proposalUrl = `${APP_URL}/proposals/${proposal.id}`;
+    const subject = `Proposal Declined — ${jobForNotify?.title ?? proposal.title}`;
+    const body = `A client has declined the proposal for "${jobForNotify?.title ?? proposal.title}".\n\nReason: ${parsed.data.reason || 'No reason given'}\n\nThe job has been returned to Under Review. Please follow up with the client.\n\nView proposal: ${proposalUrl}`;
+    await Promise.all(
+      staffUsers.map(s =>
+        sendEmail({ to: s.email, subject, html: buildSimpleEmail(subject, body), jobId: proposal.jobId })
+          .catch(err => console.error(`[reject] notify ${s.email}:`, err))
+      )
+    );
+  } catch (err) {
+    console.error('[proposals] Rejection notification failed:', err);
+  }
 
   revalidatePath(`/proposals/${proposal.id}`);
   revalidatePath(`/jobs/${proposal.jobId}`);
   revalidatePath(`/client/proposals/${proposal.id}`);
+  revalidatePath('/client/jobs');
+  revalidatePath('/client');
   return { success: true, data: undefined };
 }
 
@@ -383,6 +425,8 @@ export async function requestRevision(
   revalidatePath(`/proposals/${proposal.id}`);
   revalidatePath(`/jobs/${proposal.jobId}`);
   revalidatePath(`/client/proposals/${proposal.id}`);
+  revalidatePath('/client/jobs');
+  revalidatePath('/client');
   return { success: true, data: undefined };
 }
 

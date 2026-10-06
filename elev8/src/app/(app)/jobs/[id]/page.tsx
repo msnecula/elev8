@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatCurrency, timeAgo } from '@/lib/utils';
-import { FileText, Briefcase, Clock, AlertTriangle, ChevronRight, ClipboardList } from 'lucide-react';
+import { FileText, Briefcase, Clock, AlertTriangle, ChevronRight, ClipboardList, ClipboardCheck } from 'lucide-react';
 import ActivityLogFeed from '@/components/jobs/ActivityLogFeed';
 
 export const metadata: Metadata = { title: 'Job Detail' };
@@ -105,6 +105,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <span className="font-medium">Risk flags:</span>
           {riskFlags.map((f) => <Badge key={f} className="bg-red-100 text-red-700 border-red-200 border">{f}</Badge>)}
         </div>
+      )}
+
+      {/* Stage-transition compliance checklist */}
+      {(job.stage === 'scheduled' || job.stage === 'in_progress') && (
+        <ComplianceActionsCard stage={job.stage} noticeId={notice?.id ?? null} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -258,6 +263,110 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </CardContent>
           </Card>
         </div>
+      </div>
+    </div>
+  );
+}
+
+type ComplianceAction = {
+  label: string;
+  sublabel: string;
+  href: string;
+  buttonLabel: string;
+};
+
+function ComplianceActionsCard({ stage, noticeId }: { stage: string; noticeId: string | null }) {
+  const isScheduled = stage === 'scheduled';
+
+  const actions: ComplianceAction[] = isScheduled
+    ? [
+        {
+          label: 'EU-787 — Annual & 5-Year Test Notification',
+          sublabel: 'File with Cal/OSHA district office before the test',
+          href: noticeId
+            ? `/documents/generate?noticeId=${noticeId}&formType=eu787`
+            : '/documents',
+          buttonLabel: 'Generate EU-787',
+        },
+        {
+          label: '48-Hour Advance Notice',
+          sublabel: 'Written notification required 48 hrs before Category 1 test',
+          href: noticeId
+            ? `/documents/advance-notice?noticeId=${noticeId}`
+            : '/documents',
+          buttonLabel: 'Generate 48-Hr Notice',
+        },
+      ]
+    : [
+        {
+          label: 'DOSH-100 — Request for Inspection',
+          sublabel: 'File to request Cal/OSHA reinspection after repairs are complete',
+          href: noticeId
+            ? `/documents/generate?noticeId=${noticeId}&formType=dosh100`
+            : '/documents',
+          buttonLabel: 'Generate DOSH-100',
+        },
+        {
+          label: 'EU-632 — Notice of Conveyance Compliance',
+          sublabel: 'File with Cal/OSHA to close out the Preliminary Order',
+          href: noticeId
+            ? `/documents/generate?noticeId=${noticeId}&formType=eu632`
+            : '/documents',
+          buttonLabel: 'Generate EU-632',
+        },
+      ];
+
+  const colorScheme = isScheduled
+    ? {
+        border: 'border-amber-200',
+        bg: 'bg-amber-50/60',
+        iconBg: 'bg-amber-100',
+        icon: 'text-amber-600',
+        title: 'text-amber-900',
+        sub: 'text-amber-700',
+        badge: 'bg-amber-100 text-amber-800 border border-amber-200',
+        divider: 'border-amber-100',
+      }
+    : {
+        border: 'border-teal-200',
+        bg: 'bg-teal-50/60',
+        iconBg: 'bg-teal-100',
+        icon: 'text-teal-600',
+        title: 'text-teal-900',
+        sub: 'text-teal-700',
+        badge: 'bg-teal-100 text-teal-800 border border-teal-200',
+        divider: 'border-teal-100',
+      };
+
+  return (
+    <div className={`rounded-lg border ${colorScheme.border} ${colorScheme.bg} p-4`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`h-7 w-7 rounded-full ${colorScheme.iconBg} flex items-center justify-center shrink-0`}>
+          <ClipboardCheck className={`h-4 w-4 ${colorScheme.icon}`} />
+        </div>
+        <div>
+          <p className={`text-sm font-semibold ${colorScheme.title}`}>
+            {isScheduled ? 'Pre-Test Filing Required' : 'Post-Repair Filing Required'}
+          </p>
+          <p className={`text-xs ${colorScheme.sub}`}>
+            {isScheduled
+              ? 'Complete these before the scheduled test'
+              : 'Complete these after all corrective work is done'}
+          </p>
+        </div>
+      </div>
+      <div className={`space-y-2 divide-y ${colorScheme.divider}`}>
+        {actions.map((action) => (
+          <div key={action.href} className="flex items-center justify-between gap-4 pt-2 first:pt-0">
+            <div className="min-w-0">
+              <p className={`text-sm font-medium ${colorScheme.title}`}>{action.label}</p>
+              <p className={`text-xs ${colorScheme.sub}`}>{action.sublabel}</p>
+            </div>
+            <Button asChild size="sm" variant="outline" className={`shrink-0 text-xs h-7 ${colorScheme.badge}`}>
+              <Link href={action.href}>{action.buttonLabel}</Link>
+            </Button>
+          </div>
+        ))}
       </div>
     </div>
   );

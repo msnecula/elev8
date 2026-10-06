@@ -8,7 +8,7 @@ import { APP_NAME } from '@/lib/constants';
 import type { UserRole } from '@/types/auth';
 import {
   FileText, Briefcase, Truck, ClipboardList,
-  Settings, LogOut, Bell, Calendar, FolderOpen, Building2,
+  Settings, LogOut, Bell, Calendar, FolderOpen, Building2, LayoutDashboard,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'reviewer'] },
   { label: 'Notices', href: '/notices', icon: FileText, roles: ['admin', 'reviewer', 'dispatcher'], matchPrefix: true },
   { label: 'Jobs', href: '/jobs', icon: Briefcase, roles: ['admin', 'reviewer', 'dispatcher'], matchPrefix: true },
   { label: 'Dispatch', href: '/dispatch', icon: Truck, roles: ['admin', 'dispatcher'] },

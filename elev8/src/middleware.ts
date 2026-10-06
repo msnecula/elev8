@@ -51,19 +51,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/technician', request.url));
   }
 
-  // /dashboard redirects by role
-  if (pathname === '/dashboard') {
-    const destinations: Record<string, string> = {
-      admin: '/notices',
-      reviewer: '/notices',
-      dispatcher: '/dispatch',
-      technician: '/technician',
-      client: '/client',
-    };
-    const dest = destinations[role] ?? '/login';
-    return NextResponse.redirect(new URL(dest, request.url));
-  }
-
   return supabaseResponse;
 }
 

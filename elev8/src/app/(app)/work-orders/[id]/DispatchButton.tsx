@@ -28,7 +28,7 @@ export default function DispatchButton({
     startTransition(async () => {
       const result = await dispatchWorkOrder(workOrderId);
       if (result.success) {
-        toast.success('Dispatched — technician notified by SMS');
+        toast.success('Dispatched — technician notified by SMS & email');
         router.refresh();
       } else {
         toast.error(result.error);

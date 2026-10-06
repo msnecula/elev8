@@ -13,7 +13,7 @@ import {
   assignTechnicianSchema,
 } from '@/lib/validations/workOrder';
 import { logJobActivity, logWorkOrderActivity } from '@/server/services/activityLogger';
-import { sendEmail, sendSMS, buildSimpleEmail } from '@/server/services/notificationService';
+import { sendEmail, sendSMS, buildSimpleEmail, sendDispatchEmail } from '@/server/services/notificationService';
 import { revalidatePath } from 'next/cache';
 import { formatDate } from '@/lib/utils';
 import { addHours } from 'date-fns';
@@ -222,8 +222,9 @@ export async function dispatchWorkOrder(
     where: eq(workOrders.id, workOrderId),
     columns: {
       id: true, jobId: true, assignedTechnicianId: true,
-      scheduledStart: true, fortyEightHourNoticeRequired: true,
-      fortyEightHourStatus: true,
+      scheduledStart: true, scheduledEnd: true,
+      fortyEightHourNoticeRequired: true,
+      fortyEightHourStatus: true, dispatchPacket: true,
     },
   });
 
@@ -251,11 +252,11 @@ export async function dispatchWorkOrder(
     .set({ stage: 'dispatched', updatedAt: new Date() })
     .where(eq(jobs.id, workOrder.jobId));
 
-  // SMS to technician
+  // SMS + email to technician
   const tech = workOrder.assignedTechnicianId
     ? await db.query.technicians.findFirst({
         where: eq(technicians.id, workOrder.assignedTechnicianId),
-        columns: { fullName: true, phone: true },
+        columns: { fullName: true, phone: true, email: true },
       })
     : null;
 
@@ -266,6 +267,21 @@ export async function dispatchWorkOrder(
     await sendSMS({
       to: tech.phone,
       body: `Elev8 Comply DISPATCH: You are dispatched for ${dateStr}. Open the app for your full dispatch packet.`,
+      jobId: workOrder.jobId,
+    });
+  }
+
+  // Dispatch email with full packet
+  if (tech?.email && workOrder.dispatchPacket && workOrder.scheduledStart) {
+    let packet: Record<string, unknown> = {};
+    try { packet = JSON.parse(workOrder.dispatchPacket as string); } catch { /* skip */ }
+    await sendDispatchEmail({
+      to: tech.email,
+      technicianName: tech.fullName,
+      packet,
+      scheduledStart: workOrder.scheduledStart,
+      scheduledEnd: workOrder.scheduledEnd ?? null,
+      workOrderId,
       jobId: workOrder.jobId,
     });
   }

@@ -149,7 +149,7 @@ export default async function DispatchPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{propertyName}</span>
-                      <StatusBadge variant="urgency" value={n.urgency} />
+                      <StatusBadge variant="urgency" value={n.urgency ?? 'medium'} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.fileName}</p>
                     <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">

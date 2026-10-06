@@ -4,14 +4,47 @@ import { accounts } from './accounts';
 import { properties } from './properties';
 import { users } from './users';
 
+export type ActionPlanStep = {
+  stepNumber: number;
+  title: string;
+  description: string;
+  priority: 'critical' | 'high' | 'medium';
+  responsibleParty: 'technician' | 'inspector' | 'dispatcher' | 'building_manager';
+  estimatedTime: string;
+  materialsNeeded: string[];
+  deadline: string | null;
+  requiresNotification: boolean;
+};
+
 export type ParsedNoticeData = {
+  // Property & Equipment
   documentType: string;
   clientCompany: string;
   propertyName: string;
   propertyAddress: string;
   buildingType: string;
+  elevatorType: string;
+  equipmentId: string;
+  serialNumber: string;
+  floorsServed: string;
+  unitsAffected: number;
+
+  // Four Key Compliance Items
+  safetyTestsRequired: string[];
+  advanceNotificationRequired: boolean;
+  advanceNotificationHours: number | null;
+  advanceNotificationRecipients: string[];
+  complianceDeadline: string | null;
+  additionalMaintenanceRequirements: string[];
+
+  // Action Plan for dispatch/technician
+  actionPlan: ActionPlanStep[];
+
+  // Dates
   inspectionDate: string | null;
   stateDeadline: string | null;
+
+  // Summary fields (kept for backward compat)
   requiredWorkSummary: string;
   detailedScope: string;
   violationItems: string[];
@@ -20,7 +53,7 @@ export type ParsedNoticeData = {
   estimatedDurationHours: number | null;
   estimatedLaborHours: number | null;
   estimatedMaterials: number | null;
-  urgency: 'critical' | 'high' | 'medium' | 'low';
+  urgency: 'low' | 'medium' | 'high' | 'critical';
   fortyEightHourRequired: boolean;
   complianceCoordinationRequired: boolean;
   missingInformation: string[];

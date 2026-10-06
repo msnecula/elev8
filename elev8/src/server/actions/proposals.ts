@@ -143,15 +143,20 @@ export async function updateProposal(
   const parsed = updateProposalSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: 'Invalid input' };
 
-  const { id, ...updates } = parsed.data;
+  const { id, totalAmount: rawTotal, ...updates } = parsed.data;
 
   // Recalculate total from line items if provided
+  let computedTotal: number | undefined = rawTotal;
   if (updates.lineItems) {
     const items = updates.lineItems as Array<{ quantity: number; unitPrice: number }>;
-    updates.totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    computedTotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   }
 
-  await db.update(proposals).set({ ...updates, updatedAt: new Date() }).where(eq(proposals.id, id));
+  await db.update(proposals).set({
+    ...updates,
+    ...(computedTotal !== undefined ? { totalAmount: computedTotal.toString() } : {}),
+    updatedAt: new Date(),
+  }).where(eq(proposals.id, id));
 
   revalidatePath(`/proposals/${id}`);
   return { success: true, data: undefined };

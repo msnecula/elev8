@@ -63,18 +63,20 @@ export function formatFileSize(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-/** Format a number as USD currency */
+/** Format a number (or numeric string from drizzle) as USD currency */
 export function formatCurrency(
-  amount: number | null | undefined,
+  amount: number | string | null | undefined,
   currency = 'USD'
 ): string {
-  if (amount == null) return '—';
+  if (amount == null || amount === '') return '—';
+  const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(n)) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(n);
 }
 
 /** Truncate a string with ellipsis */

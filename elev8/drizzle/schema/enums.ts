@@ -1,7 +1,7 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'reviewer', 'dispatcher', 'technician', 'client']);
-export const buildingTypeEnum = pgEnum('building_type', ['residential', 'commercial', 'mixed_use']);
+export const buildingTypeEnum = pgEnum('building_type', ['residential', 'commercial', 'mixed_use', 'industrial', 'government']);
 export const urgencyEnum = pgEnum('urgency', ['critical', 'high', 'medium', 'low']);
 export const noticeStatusEnum = pgEnum('notice_status', ['received', 'parsing', 'parsed', 'parse_failed', 'review_pending', 'reviewed']);
 export const noticeIntakeMethodEnum = pgEnum('notice_intake_method', ['portal_upload', 'email_intake', 'manual']);

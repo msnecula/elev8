@@ -1,57 +1,8 @@
 import 'server-only';
 import { openai, OPENAI_MODEL } from '@/lib/openai';
+import type { ActionPlanStep, ParsedNoticeData } from '@/drizzle/schema/notices';
 
-export type ActionPlanStep = {
-  stepNumber: number;
-  title: string;
-  description: string;
-  priority: 'critical' | 'high' | 'medium';
-  responsibleParty: 'technician' | 'inspector' | 'dispatcher' | 'building_manager';
-  estimatedTime: string;
-  materialsNeeded: string[];
-  deadline: string | null;
-  requiresNotification: boolean;
-};
-
-export type ParsedNoticeData = {
-  // Property & Equipment
-  documentType: string;
-  clientCompany: string;
-  propertyName: string;
-  propertyAddress: string;
-  buildingType: string;
-  elevatorType: string;
-  equipmentId: string;
-  serialNumber: string;
-  floorsServed: string;
-  unitsAffected: number;
-
-  // Four Key Compliance Items
-  safetyTestsRequired: string[];
-  advanceNotificationRequired: boolean;
-  advanceNotificationHours: number | null;
-  advanceNotificationRecipients: string[];
-  complianceDeadline: string | null;
-  additionalMaintenanceRequirements: string[];
-
-  // Action Plan for dispatch/technician
-  actionPlan: ActionPlanStep[];
-
-  // Summary fields (kept for backward compat)
-  requiredWorkSummary: string;
-  detailedScope: string;
-  violationItems: string[];
-  workType: string;
-  requiredSkillTag: string;
-  estimatedDurationHours: number | null;
-  estimatedLaborHours: number | null;
-  estimatedMaterials: number | null;
-  urgency: 'low' | 'medium' | 'high' | 'critical';
-  fortyEightHourRequired: boolean;
-  complianceCoordinationRequired: boolean;
-  missingInformation: string[];
-  parseConfidence: number;
-};
+export type { ActionPlanStep, ParsedNoticeData };
 
 export async function parseNoticeWithAI(rawText: string): Promise<{
   data: ParsedNoticeData | null;

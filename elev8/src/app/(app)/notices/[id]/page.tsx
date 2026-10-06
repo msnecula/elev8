@@ -88,7 +88,7 @@ export default async function NoticeDetailPage({ params }: { params: Promise<{ i
             </CardContent>
           </Card>
 
-          {n.parsedData && <ParsedDataPanel data={n.parsedData} />}
+          {n.parsedData && <ParsedDataPanel data={n.parsedData} confidence={n.parsedData.parseConfidence} />}
 
           {n.parseError && (
             <Card className="border-red-200 bg-red-50">

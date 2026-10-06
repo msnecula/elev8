@@ -56,13 +56,13 @@ export default async function DashboardPage() {
       db
         .select({ urgency: jobs.urgency, nextActionDate: jobs.nextActionDate })
         .from(jobs)
-        .where(notInArray(jobs.stage, TERMINAL_STAGES as unknown as string[])),
+        .where(notInArray(jobs.stage, [...TERMINAL_STAGES])),
 
       // Stage breakdown (active jobs only)
       db
         .select({ stage: jobs.stage, total: count() })
         .from(jobs)
-        .where(notInArray(jobs.stage, TERMINAL_STAGES as unknown as string[]))
+        .where(notInArray(jobs.stage, [...TERMINAL_STAGES]))
         .groupBy(jobs.stage),
 
       // Draft proposals waiting for someone to review + send

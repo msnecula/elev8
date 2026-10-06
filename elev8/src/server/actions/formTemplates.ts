@@ -71,7 +71,7 @@ export async function getUploadedTemplates(): Promise<ActionResult<
     const file = files?.find(f => f.name === `${formType}.pdf`);
     result[formType] = {
       uploaded: !!file,
-      updatedAt: file?.updated_at,
+      updatedAt: file?.updated_at ?? undefined,
     };
   }
 

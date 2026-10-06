@@ -30,7 +30,9 @@ export default async function DocumentsPage() {
     getUploadedTemplates(),
   ]);
 
-  const templates = templatesResult.success ? templatesResult.data : {};
+  const templates = templatesResult.success
+    ? templatesResult.data
+    : ({} as Record<keyof typeof FORM_TEMPLATE_INFO, { uploaded: boolean; updatedAt?: string }>);
   const formTypes = Object.keys(FORM_TEMPLATE_INFO) as Array<keyof typeof FORM_TEMPLATE_INFO>;
   const uploadedCount = formTypes.filter(t => templates[t]?.uploaded).length;
   const missingForms = formTypes.filter(t => !templates[t]?.uploaded);

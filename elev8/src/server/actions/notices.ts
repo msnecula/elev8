@@ -368,7 +368,7 @@ async function createJobFromNotice(
   if (parsedData.parseConfidence < 0.6) riskFlags.push('low_parse_confidence');
   if (parsedData.urgency === 'critical') riskFlags.push('critical_urgency');
 
-  const validBuildingTypes = ['residential', 'commercial', 'mixed_use'] as const;
+  const validBuildingTypes = ['residential', 'commercial', 'mixed_use', 'industrial', 'government'] as const;
   const buildingType = validBuildingTypes.includes(parsedData.buildingType as typeof validBuildingTypes[number])
     ? (parsedData.buildingType as typeof validBuildingTypes[number])
     : null;

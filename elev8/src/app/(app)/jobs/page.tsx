@@ -3,17 +3,35 @@ import Link from 'next/link';
 import { requireRole } from '@/lib/auth';
 import { db } from '@/server/db/client';
 import { jobs, accounts, properties, users, proposals } from '@/drizzle/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and } from 'drizzle-orm';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCurrency } from '@/lib/utils';
 import { Briefcase, AlertTriangle } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Jobs' };
 
 export default async function JobsPage() {
   await requireRole('admin', 'reviewer', 'dispatcher');
+
+  // AI-drafted proposals awaiting dispatcher / reviewer action
+  const draftProposalJobs = await db
+    .select({
+      jobId: proposals.jobId,
+      proposalId: proposals.id,
+      proposalTitle: proposals.title,
+      totalAmount: proposals.totalAmount,
+      jobTitle: jobs.title,
+      urgency: jobs.urgency,
+      accountName: accounts.name,
+    })
+    .from(proposals)
+    .leftJoin(jobs, eq(proposals.jobId, jobs.id))
+    .leftJoin(accounts, eq(jobs.accountId, accounts.id))
+    .where(and(eq(proposals.status, 'draft'), eq(jobs.stage, 'proposal_drafted')))
+    .orderBy(desc(proposals.createdAt))
+    .limit(10);
 
   // Proposals with client revision requests
   const revisionJobs = await db
@@ -69,6 +87,31 @@ export default async function JobsPage() {
           )}
         </div>
       </PageHeader>
+
+      {/* AI draft proposals awaiting review */}
+      {draftProposalJobs.length > 0 && (
+        <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+          <p className="text-sm font-semibold text-blue-800">
+            🤖 {draftProposalJobs.length} AI Proposal{draftProposalJobs.length !== 1 ? 's' : ''} Awaiting Review
+          </p>
+          <div className="space-y-1.5">
+            {draftProposalJobs.map(r => (
+              <div key={r.proposalId} className="flex items-center justify-between text-sm bg-white rounded border border-blue-200 px-3 py-2 gap-3">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{r.jobTitle ?? 'Job'}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{r.accountName}</span>
+                  {r.totalAmount && (
+                    <span className="text-xs text-blue-700 ml-2 font-semibold">{formatCurrency(r.totalAmount)}</span>
+                  )}
+                </div>
+                <Link href={`/proposals/${r.proposalId}`} className="text-xs text-blue-700 font-medium hover:underline shrink-0">
+                  Review AI Draft →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Revision requests banner */}
       {revisionJobs.length > 0 && (

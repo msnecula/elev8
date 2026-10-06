@@ -61,6 +61,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   ]);
 
   const riskFlags = (job.riskFlags as string[]) ?? [];
+  const draftProposal = job.stage === 'proposal_drafted'
+    ? linkedProposals.find(p => p.status === 'draft') ?? null
+    : null;
 
   return (
     <div className="space-y-6">
@@ -71,6 +74,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <StatusBadge variant="urgency" value={job.urgency} />
         </div>
       </PageHeader>
+
+      {/* AI proposal draft ready CTA */}
+      {draftProposal && (
+        <div className="flex items-start sm:items-center justify-between gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">AI Proposal Draft Ready</p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Review the AI-generated proposal, adjust line items if needed, then send to the client.
+                {draftProposal.totalAmount && (
+                  <span className="font-semibold ml-1">Est. {formatCurrency(draftProposal.totalAmount)}</span>
+                )}
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white">
+            <Link href={`/proposals/${draftProposal.id}`}>Review &amp; Send →</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Risk flags banner */}
       {riskFlags.length > 0 && (
@@ -156,7 +182,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   <FileText className="h-4 w-4 text-muted-foreground" />
                   Proposals
                 </CardTitle>
-                {(currentUser.role === 'admin' || currentUser.role === 'reviewer') && (
+                {['admin', 'reviewer', 'dispatcher'].includes(currentUser.role) && (
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/proposals/new?jobId=${id}`}>New Proposal</Link>
                   </Button>

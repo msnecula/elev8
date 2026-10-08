@@ -1,12 +1,12 @@
 // Elev8 Comply Service Worker
-const CACHE_NAME = 'elev8-comply-v1';
+const CACHE_NAME = 'elev8-comply-v2';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache on install
+// NOTE: Only public, credential-free assets here.
+// manifest.json is excluded — the middleware would redirect it without cookies.
 const PRECACHE_ASSETS = [
-  '/',
   '/offline',
-  '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];
@@ -54,8 +54,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful navigation responses
-          if (response.status === 200) {
+          // Only cache direct 200 responses — never cache a redirected response
+          // (a redirect-to-login cached against /client would break auth flows)
+          if (response.status === 200 && !response.redirected) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
@@ -66,7 +67,7 @@ self.addEventListener('fetch', (event) => {
         .catch(() => {
           // Return cached page or offline page on network failure
           return caches.match(request).then((cached) => {
-            return cached || caches.match(OFFLINE_URL) || caches.match('/');
+            return cached || caches.match(OFFLINE_URL);
           });
         })
     );

@@ -171,7 +171,7 @@ export default async function DocumentsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {(['eu787', 'eu776', 'dosh100', 'eu632'] as const).map(formType => (
+                          {(['eu787', 'eu776a', 'eu776b', 'dosh100', 'eu632'] as const).map(formType => (
                             <Button
                               key={formType}
                               asChild

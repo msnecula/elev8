@@ -61,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="h-full overflow-hidden">
       <head>
         {/* PWA / Mobile meta tags */}
         <meta name="mobile-web-app-capable" content="yes" />
@@ -92,7 +92,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} font-sans antialiased min-h-screen bg-background`}
+        className={`${inter.variable} font-sans antialiased h-full overflow-hidden bg-background`}
       >
         {children}
         <Toaster richColors closeButton position="top-right" />

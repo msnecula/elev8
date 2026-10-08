@@ -3,7 +3,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 
 const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/invite'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Always allow public routes and Next.js internals

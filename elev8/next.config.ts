@@ -2,8 +2,12 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
-  serverExternalPackages: ['pdf-parse', 'heic-convert', 'sharp', 'pdf-lib', '@pdf-lib/fontkit', 'pdfjs-dist'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
+  serverExternalPackages: ['pdf-parse', 'heic-convert', 'sharp', 'pdf-lib', '@pdf-lib/fontkit', 'pdfjs-dist', '@react-email/render'],
   images: {
     remotePatterns: [
       {

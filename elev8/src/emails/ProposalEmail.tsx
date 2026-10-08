@@ -1,4 +1,4 @@
-import { Text, Section } from 'react-email';
+import { Text, Section } from './react-email-shim';
 import {
   BaseEmail, EmailHeading, EmailText, EmailButton,
   EmailDivider, EmailInfoBox,

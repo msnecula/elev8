@@ -2,7 +2,7 @@ import 'server-only';
 import { db } from '@/server/db/client';
 import { notifications } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
-import { render } from 'react-email';
+import { render } from '@react-email/render';
 import { EMAIL_FROM } from '@/lib/resend';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { APP_URL } from '@/lib/constants';

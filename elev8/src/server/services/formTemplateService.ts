@@ -741,7 +741,12 @@ export async function drawDosh100Overlay(
     try {
       const field = form.createTextField(name);
       if (value) field.setText(value);
-      field.setFontSize(10);
+      // NOTE: do NOT call field.setFontSize() here — it requires a pre-existing /DA
+      // (Default Appearance) entry on the field.  When the template PDF has no AcroForm
+      // /DR resource dict (e.g. after a page-by-page pypdf repair), createTextField()
+      // produces a field with no /DA, and setFontSize() throws "No /DA entry found".
+      // updateAppearances(font) below writes the complete /DA including size, so the
+      // font is rendered correctly without calling setFontSize() first.
       if (multiline) field.enableMultiline();
       field.addToPage(page, {
         x,

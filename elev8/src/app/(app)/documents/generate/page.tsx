@@ -49,7 +49,7 @@ export default async function GeneratePage({
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <PageHeader
         title={`Generate ${validFormType.toUpperCase()}`}
         description={info.label.split(' — ')[1] ?? info.label}

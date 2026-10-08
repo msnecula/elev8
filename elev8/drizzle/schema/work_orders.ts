@@ -34,6 +34,7 @@ export const technicians = pgTable('technicians', {
   fullName: varchar('full_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
   phone: varchar('phone', { length: 50 }),
+  cccmLicense: varchar('cccm_license', { length: 100 }),
   skillTags: text('skill_tags').array().default([]).notNull(),
   regions: text('regions').array().default([]).notNull(),
   isAvailable: boolean('is_available').default(true).notNull(),

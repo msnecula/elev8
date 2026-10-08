@@ -56,14 +56,18 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
+  }
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+    overflow: hidden;
   }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-  }
-  html {
-    scroll-behavior: smooth;
+    height: 100%;
+    overflow: hidden;
   }
 }
 

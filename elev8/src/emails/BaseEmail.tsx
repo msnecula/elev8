@@ -9,7 +9,7 @@ import {
   Preview,
   Section,
   Text,
-} from 'react-email';
+} from './react-email-shim';
 import { APP_NAME } from '@/lib/constants';
 
 interface BaseEmailProps {

@@ -63,6 +63,10 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
       mechanicLicenseExpiry: '',
       districtOffice: '',
       group: 'IV',
+      // DOSH-100 specific — pre-populated from parsedData; user can edit before generating
+      dosh100BuildingName: parsedData?.propertyName ?? '',
+      dosh100Address: parsedData?.propertyAddress ?? '',
+      dosh100ClientCompany: parsedData?.clientCompany ?? '',
     },
   });
 
@@ -208,6 +212,16 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
           // Default to Group IV (5-year test) which is most common
           additionalFields['Group 4'] = 'true';
         }
+      }
+
+      // DOSH-100 specific — exact field names from the Cal/OSHA DOSH-100 Rev. 2/2026 AcroForm
+      if (formType === 'dosh100') {
+        const stateNoValue = values.stateNo ?? '';
+        if (stateNoValue) additionalFields['Conveyance State Nos'] = stateNoValue;
+        if (values.dosh100BuildingName) additionalFields['Building Name'] = values.dosh100BuildingName;
+        if (values.dosh100Address)      additionalFields['Location Address of Conveyance (s)'] = values.dosh100Address;
+        if (values.dosh100ClientCompany) additionalFields['Name'] = values.dosh100ClientCompany;
+        // Date auto-filled by buildFieldMappings; contact info comes from env vars
       }
 
       const result = await generateFilledForm({
@@ -440,6 +454,86 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
             <div className="col-span-2 space-y-1.5">
               <Label>District Office</Label>
               <Input {...register('districtOffice')} placeholder="Cal/OSHA Los Angeles District Office" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* DOSH-100 extra inputs */}
+      {formType === 'dosh100' && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">DOSH-100 Report Details</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pre-filled from the Preliminary Order. Edit any field before generating.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            {/* Conveyance State No. — most likely to be missing */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>
+                Conveyance State No. <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                {...register('stateNo')}
+                placeholder="e.g. 050152 — from the Preliminary Order header"
+                className={!parsedData?.equipmentId ? 'border-amber-400 bg-amber-50' : ''}
+              />
+              {!parsedData?.equipmentId && (
+                <div className="flex items-start gap-2">
+                  <p className="text-xs text-amber-700 flex-1">
+                    ⚠️ Not found in parsed data — enter it manually from the PO header, or re-parse the notice if it was uploaded before the latest update.
+                  </p>
+                  {noticeId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 shrink-0 border-amber-400 text-amber-800 hover:bg-amber-100"
+                      onClick={handleReparse}
+                      disabled={isReparsing}
+                    >
+                      {isReparsing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                      Re-parse Notice
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Building / Property Name */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Building / Property Name</Label>
+              <Input
+                {...register('dosh100BuildingName')}
+                placeholder="e.g. Main Street Tower"
+              />
+            </div>
+
+            {/* Location Address */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Location Address of Conveyance</Label>
+              <Input
+                {...register('dosh100Address')}
+                placeholder="e.g. 123 Main St, Los Angeles, CA 90001"
+              />
+            </div>
+
+            {/* Responsible Party / Owner */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Responsible Party / Owner Name</Label>
+              <Input
+                {...register('dosh100ClientCompany')}
+                placeholder="e.g. ABC Properties LLC"
+              />
+            </div>
+
+            {/* Contact info note */}
+            <div className="col-span-2 rounded border border-blue-100 bg-blue-50 px-3 py-2">
+              <p className="text-xs text-blue-700">
+                <strong>Contact Name, Phone &amp; Email</strong> are filled automatically from your company settings.
+                Use &ldquo;Additional Field Overrides&rdquo; below to override them if needed.
+              </p>
             </div>
           </CardContent>
         </Card>

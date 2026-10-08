@@ -26,8 +26,8 @@ Return a JSON object with EXACTLY these fields:
   "propertyAddress": "string (full street address including city, state, zip)",
   "buildingType": "commercial | residential | mixed_use | industrial | government",
   "elevatorType": "string (hydraulic | traction | mrl | escalator | dumbwaiter | platform lift)",
-  "equipmentId": "string (equipment ID, permit number, or unit designation)",
-  "serialNumber": "string (serial number if listed, else empty string)",
+  "equipmentId": "string — the California State-assigned conveyance ID (also called State No., Device No., Unit No., or State Number on Cal/OSHA documents). This is a short alphanumeric code (e.g. E-12345, or just a number) assigned by Cal/OSHA, NOT the manufacturer's serial number. Look for it in the header or equipment table of the Preliminary Order near labels like 'State No.', 'Device No.', 'State Num', or 'Cal/OSHA Unit'. Extract exactly as printed. Empty string if not found.",
+  "serialNumber": "string — the MANUFACTURER's serial number stamped on the equipment (different from the State No.). Empty string if not found.",
   "floorsServed": "string (e.g. 'Floors 1-10', 'B1 to 5')",
   "unitsAffected": number (how many elevator units are affected),
 

@@ -10,7 +10,7 @@ import { ROLE_LABELS } from '@/lib/constants';
 import InviteClientForm from './InviteClientForm';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { FileText, ExternalLink } from 'lucide-react';
+import { FileText, ExternalLink, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -56,6 +56,28 @@ export default async function SettingsPage() {
           <CardDescription>
             Upload official PDFs from dir.ca.gov so the system can auto-fill EU-632, EU-787, DOSH-100, and other Cal/OSHA forms.
             When the state releases a new form version, upload the updated PDF here.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      {/* Technician Licenses */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Technician CCCM Licenses
+            </span>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings/technicians">
+                Manage Licenses
+                <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </Link>
+            </Button>
+          </CardTitle>
+          <CardDescription>
+            Assign each mechanic&apos;s California CCCM license number. These auto-populate on EU-632 forms
+            based on who is assigned to the job.
           </CardDescription>
         </CardHeader>
       </Card>

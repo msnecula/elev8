@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { APP_NAME, COMPANY_NAME, COMPANY_PHONE, COMPANY_ADDRESS, COMPANY_CITY, COMPANY_STATE, COMPANY_ZIP } from '@/lib/constants';
-import ScrollEnabler from './ScrollEnabler';
+import ScrollEnabler from '@/components/ScrollEnabler';
 
 export const metadata: Metadata = {
   title: `Privacy Policy | ${APP_NAME}`,

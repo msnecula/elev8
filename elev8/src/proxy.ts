@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/invite', '/privacy'];
+const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/invite', '/privacy', '/terms'];
 
 // Helper: copy session cookies from updateSession's response onto any redirect,
 // so token refreshes aren't lost when we redirect unauthenticated requests.

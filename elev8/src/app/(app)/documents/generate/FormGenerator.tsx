@@ -67,6 +67,8 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
       dosh100BuildingName: parsedData?.propertyName ?? '',
       dosh100Address: parsedData?.propertyAddress ?? '',
       dosh100ClientCompany: parsedData?.clientCompany ?? '',
+      // EU-776A / EU-776B specific — pre-populated from parsedData; user can edit before generating
+      eu776Address: parsedData?.propertyAddress ?? '',
     },
   });
 
@@ -222,6 +224,35 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
         if (values.dosh100Address)      additionalFields['Location Address of Conveyance (s)'] = values.dosh100Address;
         if (values.dosh100ClientCompany) additionalFields['Name'] = values.dosh100ClientCompany;
         // Date auto-filled by buildFieldMappings; contact info comes from env vars
+      }
+
+      // EU-776A / EU-776B — exact field names from PDF inspection (A uses underscores, B uses spaces)
+      if (formType === 'eu776a' || formType === 'eu776b') {
+        const stateNoValue = values.stateNo ?? '';
+        if (stateNoValue) {
+          // Field names differ between 776A and 776B
+          additionalFields[formType === 'eu776a' ? 'State_ID_#' : 'State ID'] = stateNoValue;
+        }
+        if (values.eu776Address) {
+          // Extract street-only portion (before first comma) for the building address field
+          const street = values.eu776Address.split(',')[0]?.trim() ?? values.eu776Address;
+          additionalFields[formType === 'eu776a' ? 'Building_Street_Address' : 'Building Street Address'] = street;
+        }
+        if (values.testDate) {
+          additionalFields[formType === 'eu776a' ? 'Date_of_Testing' : 'Date of Testing'] = values.testDate;
+        }
+        if (values.mechanicName) {
+          additionalFields['CCCM Performing Test'] = values.mechanicName;
+          additionalFields['Printed Name']         = values.mechanicName;
+        }
+        if (values.mechanicLicenseNumber) {
+          // 776A: 'CCCM Certificate #'  |  776B: 'CCCM Certificate' (no #)
+          additionalFields[formType === 'eu776a' ? 'CCCM Certificate #' : 'CCCM Certificate'] = values.mechanicLicenseNumber;
+        }
+        if (values.mechanicLicenseExpiry) {
+          additionalFields['Cert Expiration Date'] = values.mechanicLicenseExpiry;
+        }
+        // CQCC and driving-machine type checkboxes are auto-filled by buildFieldMappings (env vars + elevatorType)
       }
 
       const result = await generateFilledForm({
@@ -533,6 +564,97 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
               <p className="text-xs text-blue-700">
                 <strong>Contact Name, Phone &amp; Email</strong> are filled automatically from your company settings.
                 Use &ldquo;Additional Field Overrides&rdquo; below to override them if needed.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* EU-776A / EU-776B extra inputs */}
+      {(formType === 'eu776a' || formType === 'eu776b') && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold">
+              {formType === 'eu776a' ? 'EU-776A (Hydraulic)' : 'EU-776B (Traction)'} Test Details
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pre-filled from the Preliminary Order. Edit any field before generating.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            {/* California State ID */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>
+                California State ID <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                {...register('stateNo')}
+                placeholder="e.g. 050152 — from the Preliminary Order header"
+                className={!parsedData?.equipmentId ? 'border-amber-400 bg-amber-50' : ''}
+              />
+              {!parsedData?.equipmentId && (
+                <div className="flex items-start gap-2">
+                  <p className="text-xs text-amber-700 flex-1">
+                    ⚠️ Not found in parsed data — enter it manually from the PO header, or re-parse the notice if it was uploaded before the latest update.
+                  </p>
+                  {noticeId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 shrink-0 border-amber-400 text-amber-800 hover:bg-amber-100"
+                      onClick={handleReparse}
+                      disabled={isReparsing}
+                    >
+                      {isReparsing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                      Re-parse Notice
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Building Street Address */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Building Street Address</Label>
+              <Input
+                {...register('eu776Address')}
+                placeholder="e.g. 123 Main St, Los Angeles, CA 90001"
+              />
+              <p className="text-xs text-muted-foreground">
+                City, State, and Zip are extracted automatically from the address above.
+              </p>
+            </div>
+
+            {/* Date of Testing */}
+            <div className="space-y-1.5">
+              <Label>Date of Testing</Label>
+              <Input {...register('testDate')} type="date" />
+            </div>
+
+            {/* CCCM Performing Test */}
+            <div className="space-y-1.5">
+              <Label>CCCM Performing Test</Label>
+              <Input {...register('mechanicName')} placeholder="John Smith" />
+            </div>
+
+            {/* CCCM Certificate # */}
+            <div className="space-y-1.5">
+              <Label>CCCM Certificate #</Label>
+              <Input {...register('mechanicLicenseNumber')} placeholder="CCCM-XXXXX" />
+            </div>
+
+            {/* Cert Expiration Date */}
+            <div className="space-y-1.5">
+              <Label>Cert Expiration Date</Label>
+              <Input {...register('mechanicLicenseExpiry')} placeholder="MM/DD/YYYY" />
+            </div>
+
+            {/* CQCC / test result note */}
+            <div className="col-span-2 rounded border border-blue-100 bg-blue-50 px-3 py-2">
+              <p className="text-xs text-blue-700">
+                <strong>CQCC number</strong> is filled automatically from your company settings.
+                Test result checkboxes (Pass / Fail / N/A per row) must be completed manually in the downloaded PDF before filing.
               </p>
             </div>
           </CardContent>

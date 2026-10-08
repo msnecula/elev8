@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { APP_NAME, COMPANY_NAME, COMPANY_PHONE, COMPANY_ADDRESS, COMPANY_CITY, COMPANY_STATE, COMPANY_ZIP } from '@/lib/constants';
+import ScrollEnabler from './ScrollEnabler';
 
 export const metadata: Metadata = {
   title: `Privacy Policy | ${APP_NAME}`,
@@ -13,6 +14,7 @@ const CONTACT_EMAIL = 'info@precisionliftco.com';
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-slate-50">
+      <ScrollEnabler />
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">

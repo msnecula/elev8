@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/lib/toast';
 import { generateFilledForm } from '@/server/actions/formTemplates';
-import { Loader2, Download, Plus, Trash2, CheckCircle2, Info } from 'lucide-react';
+import { triggerNoticeParsing } from '@/server/actions/notices';
+import { Loader2, Download, Plus, Trash2, CheckCircle2, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import type { FormTemplateType } from '@/server/services/formTemplateService';
 import type { ParsedNoticeData } from '@/server/services/noticeParser';
 
@@ -22,15 +24,26 @@ interface Props {
 }
 
 export default function FormGenerator({ formType, noticeId, workOrderId, parsedData }: Props) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [pdfReady, setPdfReady] = useState<{ base64: string; filename: string; unfilledFields: string[] } | null>(null);
+  const [isReparsing, startReparse] = useTransition();
+  const [pdfReady, setPdfReady] = useState<{
+    base64: string;
+    filename: string;
+    unfilledFields: string[];
+    allPdfFields: Array<{ name: string; type: string; value: string }>;
+    autoFilledFields: Record<string, string>;
+    templateVersionWarning: string | null;
+  } | null>(null);
+  const [showFieldDebug, setShowFieldDebug] = useState(false);
   const [flatten, setFlatten] = useState(true);
 
   // Extra fields specific to each form type
   const { register, handleSubmit, control } = useForm({
     defaultValues: {
       extraFields: [] as Array<{ fieldName: string; value: string }>,
-      // EU-632 specific
+      // EU-632 specific — SSR-safe default; solutions are populated client-side
+      // via useEffect + replaceReq to avoid server/client hydration mismatches.
       requirements: parsedData?.violationItems?.map((v, i) => ({
         reqNumber: String(i + 1),
         solution: '',
@@ -42,6 +55,7 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
       signerName: '',
       signerPhone: '',
       // EU-787 specific
+      stateNo: parsedData?.equipmentId ?? '',
       testDate: '',
       testTime: '',
       mechanicName: '',
@@ -55,9 +69,44 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
   const { fields: extraFields, append: appendExtra, remove: removeExtra } = useFieldArray({
     control, name: 'extraFields',
   });
-  const { fields: reqFields, append: appendReq, remove: removeReq } = useFieldArray({
+  const { fields: reqFields, append: appendReq, remove: removeReq, replace: replaceReq } = useFieldArray({
     control, name: 'requirements',
   });
+
+  // After hydration: expand rows to max(violations, actionPlan) and pre-fill solutions.
+  // Done in useEffect (not defaultValues) to avoid SSR/client HTML mismatch.
+  useEffect(() => {
+    if (formType !== 'eu632' || !parsedData) return;
+    const violations = parsedData.violationItems ?? [];
+    const actionPlan = parsedData.actionPlan ?? [];
+    const maxRows = Math.max(violations.length, actionPlan.length);
+    if (maxRows === 0) return;
+    replaceReq(
+      Array.from({ length: maxRows }, (_, i) => ({
+        reqNumber: String(i + 1),
+        solution: actionPlan[i]
+          ? [actionPlan[i].title, actionPlan[i].description].filter(Boolean).join(': ')
+          : '',
+        cccmNumber: '',
+        violation: violations[i] ?? '',
+      })),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleReparse() {
+    if (!noticeId) return;
+    startReparse(async () => {
+      toast.loading('Re-parsing notice with AI…');
+      const result = await triggerNoticeParsing(noticeId);
+      if (result.success) {
+        toast.success('Notice re-parsed — refreshing page to load updated data');
+        router.refresh();
+      } else {
+        toast.error('Re-parse failed: ' + result.error);
+      }
+    });
+  }
 
   function onSubmit(values: any) {
     startTransition(async () => {
@@ -71,39 +120,94 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
         }
       }
 
-      // EU-632 specific field mappings
+      // EU-632 specific field mappings — exact names from the official Cal/OSHA PDF
       if (formType === 'eu632') {
-        additionalFields['CCCM Name'] = values.cccmName;
-        additionalFields['Printed Name'] = values.cccmName;
-        additionalFields['cccmName'] = values.cccmName;
-        additionalFields['License Expiry'] = values.cccmLicenseExpiry;
-        additionalFields['CCCM License Expiry'] = values.cccmLicenseExpiry;
-        additionalFields['Signer Name'] = values.signerName;
-        additionalFields['Signer Phone'] = values.signerPhone;
+        // State No. — try every known variant so at least one hits the PDF field
+        const stateNoValue = values.stateNo ?? '';
+        if (stateNoValue) {
+          for (const key of [
+            'State  No', 'State No:', 'State No', 'State No.', 'StateNo', 'State Number',
+            'Unit No', 'Unit No.', 'Device No', 'Device No.',
+            'Conveyance Number', 'TextField4', 'TextField5',
+          ]) {
+            additionalFields[key] = stateNoValue;
+          }
+        }
 
-        // Map requirement rows to common field name patterns
+        // Printed name fields (exact PDF field names)
+        if (values.cccmName)          additionalFields['(Printed Name)_1']      = values.cccmName;
+        if (values.signerName)        additionalFields['(Printed Name)_2']      = values.signerName;
+        if (values.cccmLicenseExpiry) additionalFields['License Expire Date']   = values.cccmLicenseExpiry;
+
+        // (Printed Name & Title) = "Name, CCCM #<license>" using the first row's CCCM#
+        // (server auto-fills this too, but we override to ensure the license is included)
+        const primaryCccm = values.requirements[0]?.cccmNumber ?? '';
+        if (values.cccmName) {
+          additionalFields['(Printed Name & Title)'] = primaryCccm
+            ? `${values.cccmName}, CCCM #${primaryCccm}`
+            : values.cccmName;
+        }
+
+        // Requirement / solution rows — PDF uses underscore format: Req_1, Solution_1, CCCM_1
         for (let i = 0; i < values.requirements.length; i++) {
           const r = values.requirements[i];
-          additionalFields[`Req ${i + 1}`] = r.reqNumber;
-          additionalFields[`req${i + 1}`] = r.reqNumber;
-          additionalFields[`Solution ${i + 1}`] = r.solution;
-          additionalFields[`solution${i + 1}`] = r.solution;
-          additionalFields[`CCCM ${i + 1}`] = r.cccmNumber;
-          additionalFields[`cccm${i + 1}`] = r.cccmNumber;
+          // A row has content if the user typed a solution OR the row was pre-populated from parsed data
+          const hasContent = !!(r.solution || r.violation);
+
+          if (hasContent) {
+            // ✅ FIX: Req_N is ALWAYS the row number (1, 2, 3…) based on position,
+            //         never the violation text, and never dependent on the editable reqNumber field
+            additionalFields[`Req_${i + 1}`] = String(i + 1);
+          }
+          if (r.solution) additionalFields[`Solution_${i + 1}`] = r.solution;
+
+          // ✅ FIX: CCCM_N only fills when a solution is present for this row
+          if (hasContent && r.solution) {
+            if (r.cccmNumber) additionalFields[`CCCM_${i + 1}`] = r.cccmNumber;
+            // If no user cccmNumber, server auto-fill (mechanic license from env) applies
+          } else {
+            // No solution: explicitly clear so server auto-fill is overridden for this row
+            additionalFields[`CCCM_${i + 1}`] = '';
+          }
+        }
+
+        // Clear CCCM rows beyond the requirements list (overrides server auto-fill of all 11)
+        for (let i = values.requirements.length; i < 11; i++) {
+          additionalFields[`CCCM_${i + 1}`] = '';
         }
       }
 
-      // EU-787 specific
+      // EU-787 specific — keys match the EXACT field names in the official PDF
       if (formType === 'eu787') {
-        additionalFields['Test Date'] = values.testDate;
-        additionalFields['testDate'] = values.testDate;
-        additionalFields['Test Time'] = values.testTime;
-        additionalFields['Mechanic Name'] = values.mechanicName;
-        additionalFields['CCCM Name'] = values.mechanicName;
-        additionalFields['License Number'] = values.mechanicLicenseNumber;
-        additionalFields['License Expiry'] = values.mechanicLicenseExpiry;
-        additionalFields['District Office'] = values.districtOffice;
-        additionalFields['Group'] = values.group;
+        // State No. — try every known variant so at least one hits the PDF field
+        const stateNoValue = values.stateNo ?? '';
+        if (stateNoValue) {
+          for (const key of [
+            'State No.', 'State No', 'StateNo', 'State Number',
+            'Unit No', 'Unit No.', 'Car No', 'Car No.',
+            'Device No', 'Device No.', 'Cal State No',
+          ]) {
+            additionalFields[key] = stateNoValue;
+          }
+        }
+
+        additionalFields['TEST DATE']               = values.testDate;
+        additionalFields['TIME']                    = values.testTime;
+        additionalFields['Mechanic Performing Test'] = values.mechanicName;
+        additionalFields['Prepared by']             = values.mechanicName;
+        additionalFields['License No']              = values.mechanicLicenseNumber;
+        additionalFields['CCCM No']                 = values.mechanicLicenseNumber;
+        additionalFields['expiry date']             = values.mechanicLicenseExpiry;
+        additionalFields['District Office']         = values.districtOffice;
+
+        // Group 3 = Annual (Group III), Group 4 = 5-Year (Group IV)
+        // These are checkboxes in the PDF — set the relevant one to 'true'
+        if (values.group === 'III' || values.group === '3') {
+          additionalFields['Group 3'] = 'true';
+        } else {
+          // Default to Group IV (5-year test) which is most common
+          additionalFields['Group 4'] = 'true';
+        }
       }
 
       const result = await generateFilledForm({
@@ -119,6 +223,9 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
           base64: result.data.pdfBase64,
           filename: result.data.filename,
           unfilledFields: result.data.unfilledFields,
+          allPdfFields: result.data.allPdfFields,
+          autoFilledFields: result.data.autoFilledFields,
+          templateVersionWarning: result.data.templateVersionWarning,
         });
         toast.success('Form generated — review and download below');
       } else {
@@ -212,6 +319,34 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Certifying Mechanic (CCCM)</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label>California State No. (from PO)</Label>
+                <Input
+                  {...register('stateNo')}
+                  placeholder="e.g. 050152 — from the Preliminary Order header"
+                  className={!parsedData?.equipmentId ? 'border-amber-400 bg-amber-50' : ''}
+                />
+                {!parsedData?.equipmentId && (
+                  <div className="flex items-start gap-2">
+                    <p className="text-xs text-amber-700 flex-1">
+                      ⚠️ Not found in parsed data — enter it manually from the PO header, or re-parse the notice if it was uploaded before today&apos;s update.
+                    </p>
+                    {noticeId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7 shrink-0 border-amber-400 text-amber-800 hover:bg-amber-100"
+                        onClick={handleReparse}
+                        disabled={isReparsing}
+                      >
+                        {isReparsing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                        Re-parse Notice
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="space-y-1.5">
                 <Label>Full Name (printed)</Label>
                 <Input {...register('cccmName')} placeholder="John Smith" />
@@ -238,6 +373,36 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Test Details</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1.5">
+              <Label>
+                California State No. <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                {...register('stateNo')}
+                placeholder="e.g. E-12345 — from the Preliminary Order header"
+                className={!parsedData?.equipmentId ? 'border-amber-400 bg-amber-50' : ''}
+              />
+              {!parsedData?.equipmentId && (
+                <div className="flex items-start gap-2">
+                  <p className="text-xs text-amber-700 flex-1">
+                    ⚠️ Not found in parsed data — enter it manually from the PO header, or re-parse the notice if it was uploaded before today's update.
+                  </p>
+                  {noticeId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 shrink-0 border-amber-400 text-amber-800 hover:bg-amber-100"
+                      onClick={handleReparse}
+                      disabled={isReparsing}
+                    >
+                      {isReparsing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                      Re-parse Notice
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label>Test Date</Label>
               <Input {...register('testDate')} type="date" />
@@ -259,8 +424,18 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
               <Input {...register('mechanicLicenseExpiry')} placeholder="MM/DD/YYYY" />
             </div>
             <div className="space-y-1.5">
-              <Label>Group (II / III / IV)</Label>
-              <Input {...register('group')} placeholder="IV" />
+              <Label>Test Group</Label>
+              <select
+                {...register('group')}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="IV">Group IV — 5-Year Safety Test (most common)</option>
+                <option value="III">Group III — Annual Safety Test</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Group III = annual; Group IV = 5-year hydraulic/traction safety test.
+                Checks the corresponding box in the PDF.
+              </p>
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>District Office</Label>
@@ -336,26 +511,69 @@ export default function FormGenerator({ formType, noticeId, workOrderId, parsedD
             </div>
           </div>
 
+          {/* Template version drift warning — shown when fingerprint changed since last calibration */}
+          {pdfReady.templateVersionWarning && (
+            <div className="rounded border border-yellow-300 bg-yellow-50 p-3 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-yellow-800 mb-0.5">Template Version Warning</p>
+                <p className="text-xs text-yellow-700">{pdfReady.templateVersionWarning}</p>
+              </div>
+            </div>
+          )}
+
           {pdfReady.unfilledFields.length > 0 && (
             <div className="rounded border border-amber-200 bg-amber-50 p-3">
               <p className="text-xs font-semibold text-amber-800 flex items-center gap-1 mb-1">
                 <Info className="h-3.5 w-3.5" />
                 {pdfReady.unfilledFields.length} field{pdfReady.unfilledFields.length !== 1 ? 's' : ''} could not be auto-filled
               </p>
-              <p className="text-xs text-amber-700 mb-1">
-                These fields exist in the official PDF but weren't matched to your data.
-                You can fill them manually in Adobe Acrobat or use the field overrides above:
+              <p className="text-xs text-amber-700 mb-2">
+                Use "Additional Field Overrides" above — paste the exact field name from the list below, then enter the value.
               </p>
-              <div className="font-mono text-xs text-amber-800 space-y-0.5 max-h-24 overflow-y-auto">
-                {pdfReady.unfilledFields.slice(0, 15).map(f => (
-                  <div key={f}>• {f}</div>
+              <div className="font-mono text-xs text-amber-800 space-y-0.5">
+                {pdfReady.unfilledFields.map(f => (
+                  <div key={f} className="flex items-center gap-1">
+                    <span className="text-amber-500">•</span>
+                    <span className="select-all">{f}</span>
+                  </div>
                 ))}
-                {pdfReady.unfilledFields.length > 15 && (
-                  <div className="text-amber-600">...and {pdfReady.unfilledFields.length - 15} more</div>
-                )}
               </div>
             </div>
           )}
+
+          {/* PDF Field Inspector — shows ALL fields so we can verify exact names */}
+          <div className="rounded border border-slate-200 bg-slate-50 p-3">
+            <button
+              type="button"
+              onClick={() => setShowFieldDebug(v => !v)}
+              className="text-xs font-semibold text-slate-600 flex items-center gap-1 w-full text-left"
+            >
+              <Info className="h-3.5 w-3.5" />
+              {showFieldDebug ? '▾' : '▸'} PDF Field Inspector ({pdfReady.allPdfFields.length} total fields)
+            </button>
+            {showFieldDebug && (
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-slate-500 mb-2">
+                  All fields in the uploaded PDF template. Green = auto-filled, Red = not filled.
+                  Copy exact field names into the overrides above if needed.
+                </p>
+                {pdfReady.allPdfFields.map(f => {
+                  const filled = pdfReady.autoFilledFields[f.name] || '';
+                  return (
+                    <div key={f.name} className={`flex items-center gap-2 text-xs font-mono rounded px-1.5 py-0.5 ${
+                      filled ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-700'
+                    }`}>
+                      <span className="shrink-0">{filled ? '✓' : '○'}</span>
+                      <span className="select-all flex-1">{f.name}</span>
+                      <span className="text-xs opacity-60 font-sans">{f.type}</span>
+                      {filled && <span className="opacity-70 truncate max-w-[120px]">= {filled}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <Button onClick={downloadPdf} className="bg-green-600 hover:bg-green-700 text-white">
             <Download className="mr-2 h-4 w-4" />

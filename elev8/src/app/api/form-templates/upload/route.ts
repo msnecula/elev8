@@ -76,38 +76,99 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Strategy 2: python3 + pypdf
+    // Strategy 2: python3 / python + pypdf
+    // Handles null-password encrypted Cal/OSHA PDFs (e.g. DOSH-100).
+    // Tries 'python3' (Linux/macOS/Vercel) then 'python' (Windows).
+    //
+    // pypdf 6.x notes:
+    //   - 'strict' param removed — do NOT pass it
+    //   - Pass password=b"" in constructor for encrypted PDFs (preferred in 6.x)
+    //   - Page-by-page copy avoids broken page tree from clone_reader_document_root
     if (buffer === rawBuffer) {
       const pyScript = [
-        'import sys, io',
-        'try:',
-        '    from pypdf import PdfReader, PdfWriter',
-        'except ImportError:',
-        '    from PyPDF2 import PdfReader, PdfWriter',
+        'import sys, io, traceback',
         'inp = sys.stdin.buffer.read()',
-        'reader = PdfReader(io.BytesIO(inp), strict=False)',
-        'writer = PdfWriter()',
-        'writer.clone_reader_document_root(reader)',
-        'out = io.BytesIO()',
-        'writer.write(out)',
-        'sys.stdout.buffer.write(out.getvalue())',
+        'sys.stderr.write("[py] stdin: {} bytes\\n".format(len(inp)))',
+        'result = None',
+        'for lib in ["pypdf", "PyPDF2"]:',
+        '    try:',
+        '        mod = __import__(lib)',
+        '        PdfReader = mod.PdfReader',
+        '        PdfWriter = mod.PdfWriter',
+        '    except ImportError:',
+        '        sys.stderr.write("[py] {} not installed\\n".format(lib))',
+        '        continue',
+        '    # Try passing password to constructor first (pypdf >=4 preferred way)',
+        '    # then fall back to plain constructor + decrypt() call',
+        '    for kw in [{"password": b""}, {}]:',
+        '        try:',
+        '            reader = PdfReader(io.BytesIO(inp), **kw)',
+        '            if reader.is_encrypted:',
+        '                reader.decrypt("")',
+        '            w = PdfWriter()',
+        '            # append() copies pages AND the /AcroForm dictionary (fields)',
+        '            # page-by-page add_page() copies only pages — AcroForm is lost',
+        '            try:',
+        '                w.append(reader)',
+        '                if len(w.pages) == 0: raise ValueError("append: 0 pages")',
+        '                sys.stderr.write("[{}] append ok, {} pages\\n".format(lib, len(w.pages)))',
+        '            except Exception as e_app:',
+        '                sys.stderr.write("[{}] append fallback: {}\\n".format(lib, e_app))',
+        '                w = PdfWriter()',
+        '                for page in reader.pages:',
+        '                    w.add_page(page)',
+        '            buf = io.BytesIO()',
+        '            w.write(buf)',
+        '            result = buf.getvalue()',
+        '            sys.stderr.write("[{}] ok {} bytes\\n".format(lib, len(result)))',
+        '            break',
+        '        except Exception as exc:',
+        '            sys.stderr.write("[{}] kw={}: {}\\n{}\\n".format(',
+        '                lib, list(kw.keys()), exc, traceback.format_exc()))',
+        '    if result:',
+        '        break',
+        '# Fallback: pikepdf (install with: pip install pikepdf)',
+        'if not result:',
+        '    try:',
+        '        import pikepdf',
+        '        pdf = pikepdf.open(io.BytesIO(inp), password="")',
+        '        buf = io.BytesIO()',
+        '        pdf.save(buf)',
+        '        result = buf.getvalue()',
+        '        sys.stderr.write("[pikepdf] ok {} bytes\\n".format(len(result)))',
+        '    except Exception as exc:',
+        '        sys.stderr.write("[pikepdf] failed: {}\\n".format(exc))',
+        'if result and len(result) > 100:',
+        '    sys.stdout.buffer.write(result)',
+        'else:',
+        '    sys.stderr.write("[py] all strategies failed\\n")',
+        '    sys.exit(1)',
       ].join('\n');
 
-      const r = spawnSync('python3', ['-c', pyScript], {
-        input: rawBuffer,
-        timeout: 15_000,
-        maxBuffer: 50 * 1024 * 1024,
-      });
-      if (r.status === 0 && r.stdout && r.stdout.length > 100) {
-        buffer = r.stdout;
-        console.log(`[upload/route] python3/pypdf repair OK for ${formType}`);
-      } else {
-        console.warn('[upload/route] python3 repair failed:', r.stderr?.toString().slice(0, 200));
+      for (const cmd of ['python3', 'python']) {
+        const r = spawnSync(cmd, ['-c', pyScript], {
+          input: rawBuffer,
+          timeout: 15_000,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+        if (r.status === 0 && r.stdout && r.stdout.length > 100) {
+          buffer = r.stdout;
+          console.log(`[upload/route] ${cmd}/pypdf repair OK for ${formType}`);
+          break;
+        } else {
+          // Increased to 2000 chars so we can see the full exception class + message
+          console.warn(`[upload/route] ${cmd} repair failed:`, r.stderr?.toString().slice(0, 2000));
+        }
       }
     }
 
     if (buffer === rawBuffer) {
-      console.warn(`[upload/route] No PDF repair available for ${formType} — storing original.`);
+      console.warn(
+        `[upload/route] No PDF repair available for ${formType} — storing original. ` +
+        'FIX OPTIONS: (1) install qpdf for Windows from https://github.com/qpdf/qpdf/releases ' +
+        'and run: qpdf --decrypt original.pdf fixed.pdf then upload fixed.pdf; ' +
+        'OR (2) pip install pikepdf (has Windows wheels, wraps libqpdf).',
+      );
     }
   } catch (err) {
     console.warn('[upload/route] PDF repair error:', (err as Error).message);
@@ -136,6 +197,10 @@ export async function POST(req: NextRequest) {
     fields = inspection.fields;
     isXfa = inspection.isXfa;
     fingerprint = await fingerprintPdf(buffer);
+    // Log exact field names so we can verify buildFieldMappings keys match
+    if (fields.length > 0) {
+      console.log(`[upload/route] ${formType} AcroForm fields (${fields.length}):`, fields.map(f => f.name).join(' | '));
+    }
   } catch (err) {
     console.warn('[upload/route] PDF inspection failed:', err);
   }

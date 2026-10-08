@@ -91,6 +91,15 @@ export default function LoginForm({
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in…</> : 'Sign In'}
           </Button>
         </form>
+        <p className="mt-4 text-center text-[11px] text-muted-foreground leading-relaxed px-1">
+          By using this platform, you agree to our{' '}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+            Privacy Policy
+          </Link>
+          . SMS advance notices are sent to property managers per Cal/OSHA requirements.
+          Mobile opt-in data is never shared with third parties for marketing purposes.
+          Reply STOP to opt out.
+        </p>
       </CardContent>
     </Card>
   );

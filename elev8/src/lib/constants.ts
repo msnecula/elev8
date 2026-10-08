@@ -3,6 +3,13 @@ import type { UserRole } from '@/types/auth';
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'Elev8 Comply';
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
+export const COMPANY_NAME = 'Precision Lift Co.';
+export const COMPANY_PHONE = '562 304-9444';
+export const COMPANY_ADDRESS = '9634 Washburn Rd Suite A';
+export const COMPANY_CITY = 'Downey';
+export const COMPANY_STATE = 'CA';
+export const COMPANY_ZIP = '90241';
+
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 export const ALLOWED_NOTICE_MIME_TYPES = ['application/pdf'];
 export const ALLOWED_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];

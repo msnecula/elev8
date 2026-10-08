@@ -52,11 +52,9 @@ export default function AdvanceNoticeForm({
     }
 
     startTransition(async () => {
-      // For notices without a work order, we use a simplified approach
-      const id = workOrderId ?? 'none';
-
       const result = await generate48HourNotice({
-        workOrderId: id,
+        workOrderId: workOrderId ?? undefined,
+        noticeId: noticeId,
         recipientName: values.recipientName,
         recipientCompany: values.recipientCompany,
         recipientAddress: values.recipientAddress,

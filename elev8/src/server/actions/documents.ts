@@ -83,7 +83,8 @@ export async function generateEU632(input: {
  * Generates a 48-Hour Advance Notice Letter from a job/work order.
  */
 export async function generate48HourNotice(input: {
-  workOrderId: string;
+  workOrderId?: string;
+  noticeId?: string;
   recipientName: string;
   recipientCompany: string;
   recipientAddress: string;
@@ -94,29 +95,60 @@ export async function generate48HourNotice(input: {
 }): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   await requireRole('admin', 'dispatcher');
 
-  const woResult = await db
-    .select({
-      wo: workOrders,
-      job: jobs,
-      account: accounts,
-      property: properties,
-    })
-    .from(workOrders)
-    .leftJoin(jobs, eq(workOrders.jobId, jobs.id))
-    .leftJoin(accounts, eq(jobs.accountId, accounts.id))
-    .leftJoin(properties, eq(jobs.propertyId, properties.id))
-    .where(eq(workOrders.id, input.workOrderId))
-    .limit(1);
+  if (!input.workOrderId && !input.noticeId) {
+    return { success: false, error: 'Either a work order ID or notice ID is required.' };
+  }
 
-  if (!woResult[0]) return { success: false, error: 'Work order not found' };
-  const { wo, job, account, property } = woResult[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let wo: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let job: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let account: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let property: any = null;
+  let parsed: ParsedNoticeData | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let packet: any = null;
 
-  const notice = job?.noticeId
-    ? await db.query.notices.findFirst({ where: eq(notices.id, job.noticeId) })
-    : null;
-  const parsed = notice?.parsedData as unknown as ParsedNoticeData | null;
+  if (input.workOrderId) {
+    // ── Path A: work order provided — pull all data through the WO ─────────────
+    const woResult = await db
+      .select({ wo: workOrders, job: jobs, account: accounts, property: properties })
+      .from(workOrders)
+      .leftJoin(jobs, eq(workOrders.jobId, jobs.id))
+      .leftJoin(accounts, eq(jobs.accountId, accounts.id))
+      .leftJoin(properties, eq(jobs.propertyId, properties.id))
+      .where(eq(workOrders.id, input.workOrderId))
+      .limit(1);
 
-  const packet = wo.dispatchPacket ? JSON.parse(wo.dispatchPacket as string) : null;
+    if (!woResult[0]) return { success: false, error: 'Work order not found.' };
+    wo      = woResult[0].wo;
+    job     = woResult[0].job;
+    account = woResult[0].account;
+    property = woResult[0].property;
+
+    const linkedNotice = job?.noticeId
+      ? await db.query.notices.findFirst({ where: eq(notices.id, job.noticeId) })
+      : null;
+    parsed = linkedNotice?.parsedData as unknown as ParsedNoticeData | null;
+    packet = wo.dispatchPacket ? JSON.parse(wo.dispatchPacket as string) : null;
+  } else {
+    // ── Path B: only noticeId — no work order yet ────────────────────────────
+    const noticeResult = await db
+      .select({ notice: notices, account: accounts, property: properties })
+      .from(notices)
+      .leftJoin(accounts, eq(notices.accountId, accounts.id))
+      .leftJoin(properties, eq(notices.propertyId, properties.id))
+      .where(eq(notices.id, input.noticeId!))
+      .limit(1);
+
+    if (!noticeResult[0]) return { success: false, error: 'Notice not found.' };
+    account  = noticeResult[0].account;
+    property = noticeResult[0].property;
+    parsed   = noticeResult[0].notice?.parsedData as unknown as ParsedNoticeData | null;
+    // wo / scheduledWorkDate / scheduledWorkTime stay null → rendered as blank in PDF
+  }
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -131,10 +163,10 @@ export async function generate48HourNotice(input: {
       : parsed?.propertyAddress ?? '',
     stateId: parsed?.equipmentId ?? packet?.stateId ?? '',
     elevatorDescription: `${parsed?.elevatorType ?? 'Elevator'} — ${parsed?.equipmentId ?? ''}`.trim(),
-    scheduledWorkDate: wo.scheduledStart
+    scheduledWorkDate: wo?.scheduledStart
       ? new Date(wo.scheduledStart).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       : '',
-    scheduledWorkTime: wo.scheduledStart
+    scheduledWorkTime: wo?.scheduledStart
       ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       : '',
     natureOfWork: parsed?.requiredWorkSummary ?? job?.title ?? '',

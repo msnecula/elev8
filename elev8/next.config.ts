@@ -1,28 +1,19 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: '10mb',
     },
   },
-  serverExternalPackages: [
-    "pdf-parse",
-    "heic-convert",
-    "sharp",
-    "pdf-lib",
-    "@pdf-lib/fontkit",
-    "pdfjs-dist",
-    "@react-email/render",
-  ],
+  serverExternalPackages: ['pdf-parse', 'heic-convert', 'sharp', 'pdf-lib', '@pdf-lib/fontkit', 'pdfjs-dist', '@react-email/render'],
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/**",
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/**',
       },
     ],
   },

@@ -5,22 +5,24 @@ import { db } from '@/server/db/client';
 import { notices, accounts } from '@/drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getUploadedTemplates } from '@/server/actions/formTemplates';
+import { getDocumentVault } from '@/server/actions/documents';
 import { FORM_TEMPLATE_INFO } from '@/server/services/formTemplateService';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  AlertCircle, CheckCircle2, ExternalLink, FileText, Settings,
+  AlertCircle, CheckCircle2, FileText, Settings, Archive,
 } from 'lucide-react';
 import type { ParsedNoticeData } from '@/server/services/noticeParser';
+import DocumentVaultSection from './DocumentVaultSection';
 
 export const metadata: Metadata = { title: 'Compliance Documents' };
 
 export default async function DocumentsPage() {
   await requireRole('admin', 'dispatcher');
 
-  const [parsedNotices, templatesResult] = await Promise.all([
+  const [parsedNotices, templatesResult, vaultResult] = await Promise.all([
     db.select({ notice: notices, account: { name: accounts.name } })
       .from(notices)
       .leftJoin(accounts, eq(notices.accountId, accounts.id))
@@ -28,7 +30,10 @@ export default async function DocumentsPage() {
       .orderBy(desc(notices.createdAt))
       .limit(50),
     getUploadedTemplates(),
+    getDocumentVault(),
   ]);
+
+  const vaultDocs = vaultResult.success ? vaultResult.data : [];
 
   const templates = templatesResult.success
     ? templatesResult.data
@@ -200,6 +205,25 @@ export default async function DocumentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Document Vault */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              Document Vault
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Every Cal/OSHA notice PDF and generated form saved automatically — your paper trail.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {vaultDocs.length} {vaultDocs.length === 1 ? 'document' : 'documents'}
+          </Badge>
+        </div>
+        <DocumentVaultSection docs={vaultDocs} />
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   APP_NAME,
+  APP_URL,
   COMPANY_NAME,
   COMPANY_PHONE,
   COMPANY_ADDRESS,
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
 
 const EFFECTIVE_DATE = 'October 1, 2026';
 const CONTACT_EMAIL = 'info@precisionliftco.com';
-const PLATFORM_URL = 'https://elev8-lilac.vercel.app';
 
 export default function TermsPage() {
   return (
@@ -76,7 +76,7 @@ export default function TermsPage() {
               <li>Providing a client portal for property managers to review job status and documents.</li>
             </ul>
             <p className="mt-3">
-              The Platform is available at <strong>{PLATFORM_URL}</strong>.
+              The Platform is available at <strong>{APP_URL}</strong>.
             </p>
           </section>
 
@@ -112,7 +112,7 @@ export default function TermsPage() {
               relationship for elevator compliance work. By providing a phone number for elevator compliance
               services, the recipient acknowledges that they may receive automated advance-notice SMS messages
               related to scheduled elevator inspection or repair visits at their property. The opt-in disclosure
-              is also displayed on the {APP_NAME} login page at <strong>{PLATFORM_URL}/login</strong>.
+              is also displayed on the {APP_NAME} login page at <strong>{APP_URL}/login</strong>.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.3 Types of Messages Sent</h3>

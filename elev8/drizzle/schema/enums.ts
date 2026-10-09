@@ -24,3 +24,14 @@ export const activityEventTypeEnum = pgEnum('activity_event_type', [
 ]);
 export const notificationTypeEnum = pgEnum('notification_type', ['email', 'sms', 'in_app']);
 export const notificationStatusEnum = pgEnum('notification_status', ['pending', 'sent', 'failed']);
+export const documentTypeEnum = pgEnum('document_type', [
+  'notice_pdf',
+  'eu632',
+  'eu787',
+  'eu776a',
+  'eu776b',
+  'dosh100',
+  'advance_notice_48hr',
+  'proposal_pdf',
+  'work_order_pdf',
+]);

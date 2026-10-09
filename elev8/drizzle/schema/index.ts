@@ -8,4 +8,5 @@ export * from './jobs';
 export * from './proposals';
 export * from './work_orders';
 export * from './activity_logs';
+export * from './documents';
 export * from './relations';

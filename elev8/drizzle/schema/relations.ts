@@ -8,6 +8,7 @@ import { jobs } from './jobs';
 import { proposals, proposalTemplates } from './proposals';
 import { schedulingRequests, technicians, workOrders, complianceNotices } from './work_orders';
 import { fileAttachments, activityLogs, notifications } from './activity_logs';
+import { documents } from './documents';
 
 export const accountsRelations = relations(accounts, ({ many }) => ({
   users: many(users),
@@ -15,6 +16,7 @@ export const accountsRelations = relations(accounts, ({ many }) => ({
   properties: many(properties),
   notices: many(notices),
   jobs: many(jobs),
+  documents: many(documents),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -37,6 +39,7 @@ export const propertiesRelations = relations(properties, ({ one, many }) => ({
   account: one(accounts, { fields: [properties.accountId], references: [accounts.id] }),
   notices: many(notices),
   jobs: many(jobs),
+  documents: many(documents),
 }));
 
 export const noticesRelations = relations(notices, ({ one, many }) => ({
@@ -45,6 +48,7 @@ export const noticesRelations = relations(notices, ({ one, many }) => ({
   submittedBy: one(users, { fields: [notices.submittedBy], references: [users.id], relationName: 'notice_submittedBy' }),
   assignedReviewer: one(users, { fields: [notices.assignedReviewerId], references: [users.id], relationName: 'notice_assignedReviewer' }),
   jobs: many(jobs),
+  documents: many(documents),
 }));
 
 export const jobsRelations = relations(jobs, ({ one, many }) => ({
@@ -58,6 +62,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   activityLogs: many(activityLogs),
   notifications: many(notifications),
   complianceNotices: many(complianceNotices),
+  documents: many(documents),
 }));
 
 export const proposalTemplatesRelations = relations(proposalTemplates, ({ many }) => ({
@@ -107,4 +112,12 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
   job: one(jobs, { fields: [notifications.jobId], references: [jobs.id] }),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  account: one(accounts, { fields: [documents.accountId], references: [accounts.id] }),
+  property: one(properties, { fields: [documents.propertyId], references: [properties.id] }),
+  notice: one(notices, { fields: [documents.noticeId], references: [notices.id] }),
+  job: one(jobs, { fields: [documents.jobId], references: [jobs.id] }),
+  generatedBy: one(users, { fields: [documents.generatedBy], references: [users.id] }),
 }));

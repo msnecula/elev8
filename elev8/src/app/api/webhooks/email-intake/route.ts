@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { db } from '../../../../server/db/client';
-import { notices, accounts } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { notices } from '@/drizzle/schema';
 import { logNoticeActivity } from '../../../../server/services/activityLogger';
 import { parseNoticeBackground } from '@/server/actions/notices';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -74,18 +73,12 @@ export async function POST(request: Request) {
   const emailMatch = from.match(/<(.+?)>/) ?? from.match(/(\S+@\S+)/);
   const senderEmail = emailMatch?.[1] ?? from;
 
-  // Match account by the sender's email address.
-  // If no account is registered for that email, route to the unmatched queue
-  // (accountId = all-zeros) so an admin can review and assign it manually.
-  const matchedAccount = senderEmail
-    ? await db.query.accounts.findFirst({
-        where: eq(accounts.email, senderEmail),
-        columns: { id: true },
-      })
-    : null;
-
+  // All email intake routes to the unmatched queue for admin review.
+  // Account assignment happens after an admin identifies the correct client
+  // from the PDF content. Matching by sender email is unreliable because
+  // clients forward from personal/staff addresses not stored on their account.
   const UNMATCHED_ACCOUNT_ID = '00000000-0000-0000-0000-000000000000';
-  const accountId = matchedAccount?.id ?? UNMATCHED_ACCOUNT_ID;
+  const accountId = UNMATCHED_ACCOUNT_ID;
 
   // Upload the PDF attachment to Supabase Storage
   let filePath: string | null = null;
@@ -137,7 +130,7 @@ export async function POST(request: Request) {
     'notice_received',
     `Notice received via email from ${senderEmail}: "${subject}" (PDF: ${pdfFilename})`,
     null,
-    { from: senderEmail, subject, accountMatched: !!matchedAccount, hasPdf: !!filePath },
+    { from: senderEmail, subject, hasPdf: !!filePath },
   );
 
   // Record the notice PDF in the document vault

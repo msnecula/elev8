@@ -19,6 +19,34 @@ export function formatDate(
   }
 }
 
+/**
+ * Format a date/time in Pacific Time (America/Los_Angeles).
+ * Automatically handles PST/PDT switching.
+ * Use this for any timestamp that includes a time-of-day component.
+ */
+export function formatDatePT(
+  date: Date | string | null | undefined,
+  includeTime = true,
+): string {
+  if (!date) return '—';
+  try {
+    const d = new Date(date);
+    const opts: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/Los_Angeles',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    };
+    if (includeTime) {
+      opts.hour = 'numeric';
+      opts.minute = '2-digit';
+    }
+    return new Intl.DateTimeFormat('en-US', opts).format(d);
+  } catch {
+    return String(date);
+  }
+}
+
 /** "3 hours ago" style relative time */
 export function timeAgo(date: Date | string | null | undefined): string {
   if (!date) return '—';

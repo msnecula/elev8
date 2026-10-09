@@ -125,10 +125,21 @@ Output only the raw extracted text. No formatting, no commentary.`,
 async function sendPdfFileToVision(
   buffer: Buffer,
 ): Promise<{ text: string; error: string | null; method: 'openai-vision' | 'none' }> {
-  try {
-    const { openai } = await import('@/lib/openai');
+  const { openai } = await import('@/lib/openai');
+  let fileId: string | null = null;
 
-    const base64 = buffer.toString('base64');
+  try {
+    // Upload the PDF to OpenAI's Files API, then reference it by file_id.
+    // This is more reliable than inline file_data: the Files API handles any
+    // PDF encoding (FlateDecode, JBIG2, CCITT) on OpenAI's side without
+    // requiring a specific model snapshot or a particular base64 format.
+    const blob = new Blob([buffer], { type: 'application/pdf' });
+    const uploadedFile = await openai.files.create({
+      file: new File([blob], 'notice.pdf', { type: 'application/pdf' }),
+      purpose: 'user_data',
+    });
+    fileId = uploadedFile.id;
+    console.log(`[extractor] Uploaded PDF to OpenAI Files API: ${fileId}`);
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -147,11 +158,8 @@ Output only the raw extracted text. No formatting, no commentary.`,
             },
             {
               type: 'file',
-              file: {
-                file_data: `data:application/pdf;base64,${base64}`,
-                filename: 'notice.pdf',
-              },
-            } as { type: 'file'; file: { file_data: string; filename: string } },
+              file: { file_id: fileId },
+            } as { type: 'file'; file: { file_id: string } },
           ],
         },
       ],
@@ -161,11 +169,16 @@ Output only the raw extracted text. No formatting, no commentary.`,
     if (text.length > 20) return { text, error: null, method: 'openai-vision' };
     return { text: '', error: 'Could not read text from the scanned document.', method: 'none' };
   } catch (err) {
-    return {
-      text: '',
-      error: `PDF file vision failed: ${err instanceof Error ? err.message : 'Unknown'}`,
-      method: 'none',
-    };
+    const errMsg = err instanceof Error ? err.message : 'Unknown';
+    console.error('[extractor] PDF file vision error:', errMsg);
+    return { text: '', error: `PDF file vision failed: ${errMsg}`, method: 'none' };
+  } finally {
+    // Delete the uploaded file from OpenAI — non-fatal if it fails
+    if (fileId) {
+      openai.files.delete(fileId).catch((e: unknown) => {
+        console.warn('[extractor] Could not delete OpenAI file:', fileId, e instanceof Error ? e.message : e);
+      });
+    }
   }
 }
 

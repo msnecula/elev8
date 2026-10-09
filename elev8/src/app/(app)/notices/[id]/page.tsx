@@ -9,7 +9,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate, formatFileSize, timeAgo } from '@/lib/utils';
+import { formatDate, formatDatePT, formatFileSize, timeAgo } from '@/lib/utils';
 import { FileText, Briefcase, AlertCircle, ChevronRight } from 'lucide-react';
 import ParsedDataPanel from './ParsedDataPanel';
 import NoticeActions from './NoticeActions';
@@ -133,7 +133,7 @@ export default async function NoticeDetailPage({ params }: { params: Promise<{ i
                 </p>
               </div>
               <div><p className="text-xs text-muted-foreground">Assigned Reviewer</p><p>{reviewer?.fullName ?? 'Unassigned'}</p></div>
-              <div><p className="text-xs text-muted-foreground">Received</p><p>{formatDate(n.createdAt, 'MMM d, yyyy h:mm a')}</p></div>
+              <div><p className="text-xs text-muted-foreground">Received</p><p>{formatDatePT(n.createdAt)}</p></div>
             </CardContent>
           </Card>
 

@@ -111,39 +111,60 @@ export async function POST(request: Request) {
     );
   }
 
-  const [notice] = await db
-    .insert(notices)
-    .values({
-      accountId,
-      submittedBy: null,
-      intakeMethod: 'email_intake',
-      status: 'received',
-      rawText: null,           // Will be populated by extractPdfText during parsing
-      filePath,
-      fileName: pdfFilename || subject || 'Email Notice',
-      mimeType: 'application/pdf',
-    })
-    .returning({ id: notices.id });
+  let notice: { id: string };
+  try {
+    const [row] = await db
+      .insert(notices)
+      .values({
+        accountId,
+        submittedBy: null,
+        intakeMethod: 'email_intake',
+        status: 'received',
+        rawText: null,           // Will be populated by extractPdfText during parsing
+        filePath,
+        fileName: pdfFilename || subject || 'Email Notice',
+        mimeType: 'application/pdf',
+      })
+      .returning({ id: notices.id });
+    notice = row;
+  } catch (err) {
+    console.error('[email-intake] Notice insert failed:', err instanceof Error ? err.message : err);
+    // Return 200 anyway so Make.com doesn't retry (which would create duplicates)
+    return NextResponse.json({ received: true, noticeId: null, warning: 'Notice insert failed' });
+  }
 
-  await logNoticeActivity(
-    notice.id,
-    'notice_received',
-    `Notice received via email from ${senderEmail}: "${subject}" (PDF: ${pdfFilename})`,
-    null,
-    { from: senderEmail, subject, hasPdf: !!filePath },
-  );
+  try {
+    await logNoticeActivity(
+      notice.id,
+      'notice_received',
+      `Notice received via email from ${senderEmail}: "${subject}" (PDF: ${pdfFilename})`,
+      null,
+      { from: senderEmail, subject, hasPdf: !!filePath },
+    );
+  } catch (err) {
+    console.error('[email-intake] logNoticeActivity failed:', err instanceof Error ? err.message : err);
+    // Non-fatal — the notice is already saved
+  }
 
-  // Record the notice PDF in the document vault
+  // Record the notice PDF in the document vault.
+  // Wrapped in try/catch so a missing migration (04_documents_vault.sql)
+  // never causes a 500 — Make.com retries on any non-2xx response, which
+  // would create duplicate notices.
   if (filePath) {
-    await db.insert(documents).values({
-      accountId,
-      noticeId: notice.id,
-      documentType: 'notice_pdf',
-      storageBucket: STORAGE_BUCKET_NOTICES,
-      storagePath: filePath,
-      fileName: pdfFilename,
-      mimeType: 'application/pdf',
-    }).onConflictDoNothing();
+    try {
+      await db.insert(documents).values({
+        accountId,
+        noticeId: notice.id,
+        documentType: 'notice_pdf',
+        storageBucket: STORAGE_BUCKET_NOTICES,
+        storagePath: filePath,
+        fileName: pdfFilename,
+        mimeType: 'application/pdf',
+      }).onConflictDoNothing();
+    } catch (err) {
+      console.error('[email-intake] Document vault insert failed (migration may be pending):', err instanceof Error ? err.message : err);
+      // Non-fatal — the notice and file are already saved; proceed to return 200
+    }
   }
 
   // Fire AI parse + proposal generation after the response is sent.

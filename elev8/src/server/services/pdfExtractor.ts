@@ -133,7 +133,10 @@ async function sendPdfFileToVision(
     // This is more reliable than inline file_data: the Files API handles any
     // PDF encoding (FlateDecode, JBIG2, CCITT) on OpenAI's side without
     // requiring a specific model snapshot or a particular base64 format.
-    const blob = new Blob([buffer], { type: 'application/pdf' });
+    //
+    // Use Uint8Array to satisfy BlobPart typing — Buffer is a Uint8Array at
+    // runtime but TypeScript's lib.dom types don't reflect that.
+    const blob = new Blob([new Uint8Array(buffer)], { type: 'application/pdf' });
     const uploadedFile = await openai.files.create({
       file: new File([blob], 'notice.pdf', { type: 'application/pdf' }),
       purpose: 'user_data',
@@ -173,9 +176,11 @@ Output only the raw extracted text. No formatting, no commentary.`,
     console.error('[extractor] PDF file vision error:', errMsg);
     return { text: '', error: `PDF file vision failed: ${errMsg}`, method: 'none' };
   } finally {
-    // Delete the uploaded file from OpenAI — non-fatal if it fails
+    // Delete the uploaded file from OpenAI — non-fatal if it fails.
+    // The SDK method is .del(), not .delete() — calling .delete() would be
+    // calling undefined(), which throws synchronously and overrides the return value.
     if (fileId) {
-      openai.files.delete(fileId).catch((e: unknown) => {
+      openai.files.del(fileId).catch((e: unknown) => {
         console.warn('[extractor] Could not delete OpenAI file:', fileId, e instanceof Error ? e.message : e);
       });
     }

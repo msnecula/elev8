@@ -68,9 +68,20 @@ export async function extractPdfText(
     console.warn('[extractor] Image extraction error:', err instanceof Error ? err.message : err);
   }
 
+  // PDF - Strategy 3: Send the raw PDF to GPT-4o as a file input.
+  // This handles scanned PDFs where images are encoded with FlateDecode, JBIG2,
+  // or other compression schemes that the raw byte scanner above cannot find.
+  console.log('[extractor] Falling back to PDF-as-file Vision strategy for scanned PDF');
+  try {
+    const result = await sendPdfFileToVision(buffer);
+    if (result.text.length > 20) return result;
+  } catch (err) {
+    console.warn('[extractor] PDF file vision error:', err instanceof Error ? err.message : err);
+  }
+
   return {
     text: '',
-    error: 'Could not extract text from this PDF. Please take a clear photo of the document with your phone and upload it as a JPG.',
+    error: 'Could not extract text from this PDF. The document may be damaged or use an unsupported format.',
     method: 'none',
   };
 }
@@ -108,6 +119,53 @@ Output only the raw extracted text. No formatting, no commentary.`,
     return { text: '', error: 'Could not read text from the document.', method: 'none' };
   } catch (err) {
     return { text: '', error: `Vision failed: ${err instanceof Error ? err.message : 'Unknown'}`, method: 'none' };
+  }
+}
+
+async function sendPdfFileToVision(
+  buffer: Buffer,
+): Promise<{ text: string; error: string | null; method: 'openai-vision' | 'none' }> {
+  try {
+    const { openai } = await import('@/lib/openai');
+
+    const base64 = buffer.toString('base64');
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 6000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `This is a scanned elevator compliance notice from the California Division of Occupational Safety and Health (Cal/OSHA) or a similar regulatory agency. Extract ALL text exactly as it appears in the document.
+Include: property address, building name, equipment IDs/serial numbers, all violation items and codes,
+compliance deadlines, inspection dates, case numbers, permit numbers, contact names and phone numbers,
+required tests, notification requirements (such as 48-hour notices), and any other compliance information.
+Output only the raw extracted text. No formatting, no commentary.`,
+            },
+            {
+              type: 'file',
+              file: {
+                file_data: `data:application/pdf;base64,${base64}`,
+                filename: 'notice.pdf',
+              },
+            } as { type: 'file'; file: { file_data: string; filename: string } },
+          ],
+        },
+      ],
+    });
+
+    const text = response.choices[0]?.message?.content?.trim() ?? '';
+    if (text.length > 20) return { text, error: null, method: 'openai-vision' };
+    return { text: '', error: 'Could not read text from the scanned document.', method: 'none' };
+  } catch (err) {
+    return {
+      text: '',
+      error: `PDF file vision failed: ${err instanceof Error ? err.message : 'Unknown'}`,
+      method: 'none',
+    };
   }
 }
 

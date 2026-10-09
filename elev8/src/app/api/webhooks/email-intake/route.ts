@@ -74,11 +74,15 @@ export async function POST(request: Request) {
   const emailMatch = from.match(/<(.+?)>/) ?? from.match(/(\S+@\S+)/);
   const senderEmail = emailMatch?.[1] ?? from;
 
-  // Try to find a matching account
-  const matchedAccount = await db.query.accounts.findFirst({
-    where: eq(accounts.isActive, true),
-    columns: { id: true },
-  });
+  // Match account by the sender's email address.
+  // If no account is registered for that email, route to the unmatched queue
+  // (accountId = all-zeros) so an admin can review and assign it manually.
+  const matchedAccount = senderEmail
+    ? await db.query.accounts.findFirst({
+        where: eq(accounts.email, senderEmail),
+        columns: { id: true },
+      })
+    : null;
 
   const UNMATCHED_ACCOUNT_ID = '00000000-0000-0000-0000-000000000000';
   const accountId = matchedAccount?.id ?? UNMATCHED_ACCOUNT_ID;

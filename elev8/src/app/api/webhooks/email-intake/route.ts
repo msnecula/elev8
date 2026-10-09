@@ -14,11 +14,10 @@ import { documents } from '@/drizzle/schema';
  * Receives inbound email payloads forwarded by Make.com from Gmail.
  * Protected by EMAIL_INTAKE_WEBHOOK_SECRET header.
  *
- * Expects JSON body:
- *   - from: string          — sender address
- *   - subject: string       — email subject
- *   - pdfBase64: string     — base64-encoded PDF attachment (the Cal/OSHA notice)
- *   - pdfFilename: string   — original filename of the PDF
+ * Accepts either:
+ *   - application/json with { from, subject, pdfBase64, pdfFilename }
+ *   - multipart/form-data with text fields (from, subject, pdfFilename)
+ *     and a binary file field named "pdfFile" carrying the raw PDF bytes
  *
  * The PDF is uploaded to Supabase Storage and the filePath stored on the notice.
  * `after()` then fires `parseNoticeBackground` which downloads the PDF,
@@ -30,24 +29,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let payload: Record<string, string> = {};
+  let from = '';
+  let subject = '';
+  let pdfBase64 = '';
+  let pdfFilename = 'notice.pdf';
+
   const contentType = request.headers.get('content-type') ?? '';
 
   try {
     if (contentType.includes('application/json')) {
-      payload = await request.json();
+      const json = await request.json() as Record<string, string>;
+      from = json['from'] ?? json['From'] ?? '';
+      subject = json['subject'] ?? json['Subject'] ?? '';
+      pdfBase64 = json['pdfBase64'] ?? '';
+      pdfFilename = json['pdfFilename'] ?? 'notice.pdf';
     } else {
+      // multipart/form-data — Make sends the PDF binary as a File field named "pdfFile"
+      // We cannot use String(v) on a File/Blob — it produces "[object File]".
+      // Instead: detect File/Blob fields, read their bytes, and base64-encode them.
       const formData = await request.formData();
-      payload = Object.fromEntries(Array.from(formData.entries()).map(([k, v]) => [k, String(v)]));
+      from = String(formData.get('from') ?? formData.get('From') ?? '');
+      subject = String(formData.get('subject') ?? formData.get('Subject') ?? '');
+      const filenameField = formData.get('pdfFilename');
+      if (filenameField) pdfFilename = String(filenameField);
+
+      // Binary PDF field: Make maps {{7.data}} → File/Blob in multipart
+      const pdfField = formData.get('pdfFile') ?? formData.get('pdfBase64');
+      if (pdfField instanceof File || pdfField instanceof Blob) {
+        const arrayBuffer = await pdfField.arrayBuffer();
+        pdfBase64 = Buffer.from(arrayBuffer).toString('base64');
+        // Use the File's own name if Make populated it and it's not a generic placeholder
+        if (pdfField instanceof File && pdfField.name && pdfField.name !== 'blob') {
+          pdfFilename = pdfField.name;
+        }
+      } else if (pdfField) {
+        // Fallback: already a base64 string (e.g. from a different sender)
+        pdfBase64 = String(pdfField);
+      }
     }
   } catch {
     return NextResponse.json({ error: 'Could not parse request body' }, { status: 400 });
   }
 
-  const from = payload['from'] ?? payload['From'] ?? '';
-  const subject = payload['subject'] ?? payload['Subject'] ?? '';
-  const pdfBase64 = payload['pdfBase64'] ?? '';
-  const pdfFilename = payload['pdfFilename'] ?? 'notice.pdf';
   const emailMatch = from.match(/<(.+?)>/) ?? from.match(/(\S+@\S+)/);
   const senderEmail = emailMatch?.[1] ?? from;
 

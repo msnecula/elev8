@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/invite', '/privacy', '/terms'];
+const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/invite', '/privacy', '/terms', '/sms'];
 
 // Helper: copy session cookies from updateSession's response onto any redirect,
 // so token refreshes aren't lost when we redirect unauthenticated requests.
@@ -25,6 +25,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/webhooks') ||
+    pathname.startsWith('/api/public') ||
     pathname === '/'
   ) {
     const { supabaseResponse } = await updateSession(request);

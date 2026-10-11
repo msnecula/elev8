@@ -3,16 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Upload, LogOut, Home } from 'lucide-react';
+import { Briefcase, Upload, LogOut, Home, User } from 'lucide-react';
+import SMSConsentModal from '@/components/SMSConsentModal';
 
 const CLIENT_NAV = [
   { label: 'Overview', href: '/client', icon: Home, exact: true },
   { label: 'My Jobs', href: '/client/jobs', icon: Briefcase },
   { label: 'Upload Notice', href: '/client/notices/new', icon: Upload },
+  { label: 'Profile', href: '/client/profile', icon: User },
 ];
 
 interface ClientShellProps {
@@ -20,6 +23,10 @@ interface ClientShellProps {
   fullName: string;
   email: string;
   accountName?: string;
+  /** Pass false to show the SMS consent modal on first visit */
+  smsConsentGiven: boolean;
+  /** Pre-fill modal phone if the user already has a phone on their profile */
+  phone?: string;
 }
 
 export default function ClientShell({
@@ -27,10 +34,13 @@ export default function ClientShell({
   fullName,
   email,
   accountName,
+  smsConsentGiven,
+  phone,
 }: ClientShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [consentGiven, setConsentGiven] = useState(smsConsentGiven);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -40,6 +50,13 @@ export default function ClientShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* SMS consent modal — shown first time a client logs in without prior consent */}
+      {!consentGiven && (
+        <SMSConsentModal
+          defaultPhone={phone ?? ''}
+          onConsented={() => setConsentGiven(true)}
+        />
+      )}
       {/* Top navigation bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">

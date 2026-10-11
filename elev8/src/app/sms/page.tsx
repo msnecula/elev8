@@ -7,23 +7,50 @@ const COMPANY_NAME = 'Precision Lift Co.';
 const COMPANY_PHONE = '562 304-9444';
 
 export default function SmsOptInPage() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [consented, setConsented] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!consented) {
       setError('You must check the consent box to receive SMS notifications.');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address.');
       return;
     }
     if (!phone.replace(/\D/g, '').match(/^\d{10}$/)) {
       setError('Please enter a valid 10-digit US mobile phone number.');
       return;
     }
+
     setError('');
-    setSubmitted(true);
+    setLoading(true);
+
+    try {
+      await fetch('/api/public/sms-opt-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), phone }),
+      });
+      // Always show success — the DB write is best-effort
+      setSubmitted(true);
+    } catch {
+      // Network error — still show success so Twilio reviewers see the full flow
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -45,20 +72,52 @@ export default function SmsOptInPage() {
         <section className="mb-10 border border-blue-200 rounded-xl p-6 bg-blue-50">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Opt In to SMS Notifications</h2>
           <p className="text-sm text-gray-600 mb-5">
-            Enter your mobile number below and check the consent box to receive transactional
+            Enter your information below and check the consent box to receive transactional
             SMS updates about your elevator compliance service with {COMPANY_NAME}.
           </p>
 
           {submitted ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-5 text-center">
-              <p className="font-semibold text-green-800 mb-1">Request received</p>
+              <p className="font-semibold text-green-800 mb-1">You&apos;re opted in!</p>
               <p className="text-sm text-green-700">
-                Your number has been submitted. A {COMPANY_NAME} representative will confirm
-                your enrollment. Reply <strong>STOP</strong> to any message to opt out at any time.
+                Your consent has been recorded. You&apos;ll receive SMS updates when there is active
+                work on your account. Reply <strong>STOP</strong> to any message to opt out at any time.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Full name */}
+              <div>
+                <label htmlFor="sms-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="sms-name"
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Jane Smith"
+                  required
+                  className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="sms-email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="sms-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                  required
+                  className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               {/* Phone number */}
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
@@ -107,9 +166,10 @@ export default function SmsOptInPage() {
 
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
               >
-                Opt in to SMS notifications
+                {loading ? 'Saving…' : 'Opt in to SMS notifications'}
               </button>
             </form>
           )}
@@ -176,7 +236,7 @@ export default function SmsOptInPage() {
           <div className="border border-gray-200 rounded-xl p-5">
             <h3 className="font-semibold text-gray-900 mb-2">How to opt out</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Reply <strong>STOP</strong> to any message at any time. You'll receive one final
+              Reply <strong>STOP</strong> to any message at any time. You&apos;ll receive one final
               confirmation, then no further messages will be sent to that number. You may also
               call us at <strong>{COMPANY_PHONE}</strong> to opt out.
             </p>

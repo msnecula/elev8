@@ -11,6 +11,11 @@ export const users = pgTable('users', {
   phone: varchar('phone', { length: 50 }),
   avatarUrl: text('avatar_url'),
   isActive: boolean('is_active').default(true).notNull(),
+  // SMS consent fields (A2P 10DLC CTIA compliance)
+  smsConsentGiven: boolean('sms_consent_given').default(false).notNull(),
+  smsConsentGivenAt: timestamp('sms_consent_given_at', { withTimezone: true }),
+  smsPhone: varchar('sms_phone', { length: 50 }),
+  smsConsentRevokedAt: timestamp('sms_consent_revoked_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({

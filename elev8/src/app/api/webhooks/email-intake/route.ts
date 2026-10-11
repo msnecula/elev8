@@ -53,7 +53,9 @@ export async function POST(request: Request) {
       if (filenameField) pdfFilename = String(filenameField);
 
       // Binary PDF field: Make maps {{7.data}} → File/Blob in multipart
-      const pdfField = formData.get('pdfFile') ?? formData.get('pdfBase64');
+      // Cast to unknown first so TypeScript allows instanceof narrowing on the
+      // string | File union — string can never match Blob/File at runtime.
+      const pdfField = (formData.get('pdfFile') ?? formData.get('pdfBase64')) as unknown;
       if (pdfField instanceof File || pdfField instanceof Blob) {
         const arrayBuffer = await pdfField.arrayBuffer();
         pdfBase64 = Buffer.from(arrayBuffer).toString('base64');

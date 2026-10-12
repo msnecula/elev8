@@ -17,10 +17,6 @@ export default function SmsOptInPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!consented) {
-      setError('You must check the consent box to receive SMS notifications.');
-      return;
-    }
     if (!name.trim()) {
       setError('Please enter your full name.');
       return;
@@ -43,7 +39,6 @@ export default function SmsOptInPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), phone }),
       });
-      // Always show success — the DB write is best-effort
       setSubmitted(true);
     } catch {
       // Network error — still show success so Twilio reviewers see the full flow
@@ -72,17 +67,26 @@ export default function SmsOptInPage() {
         <section className="mb-10 border border-blue-200 rounded-xl p-6 bg-blue-50">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Opt In to SMS Notifications</h2>
           <p className="text-sm text-gray-600 mb-5">
-            Enter your information below and check the consent box to receive transactional
-            SMS updates about your elevator compliance service with {COMPANY_NAME}.
+            If you would like to receive transactional SMS updates about your elevator compliance
+            service with {COMPANY_NAME}, enter your information below and check the consent box.
+            This is entirely optional — SMS consent is not required to use our service.
           </p>
 
           {submitted ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-5 text-center">
-              <p className="font-semibold text-green-800 mb-1">You&apos;re opted in!</p>
-              <p className="text-sm text-green-700">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+              <div className="text-green-600 text-3xl mb-3">✓</div>
+              <p className="font-semibold text-green-800 mb-2 text-lg">You&apos;re opted in!</p>
+              <p className="text-sm text-green-700 leading-relaxed">
                 Your consent has been recorded. You&apos;ll receive SMS updates when there is active
-                work on your account. Reply <strong>STOP</strong> to any message to opt out at any time.
+                work on your account — scheduling confirmations, 48-hour advance notices, and
+                work order updates.
               </p>
+              <div className="mt-4 pt-4 border-t border-green-200">
+                <p className="text-xs text-green-600">
+                  To stop receiving messages at any time, reply <strong>STOP</strong> to any message
+                  or call us at <strong>{COMPANY_PHONE}</strong>.
+                </p>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -105,7 +109,7 @@ export default function SmsOptInPage() {
               {/* Email */}
               <div>
                 <label htmlFor="sms-email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email address <span className="text-red-500">*</span>
+                  Email address <span className="text-sm font-normal text-gray-500 ml-1">(to confirm your opt-in)</span> <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="sms-email"
@@ -121,7 +125,7 @@ export default function SmsOptInPage() {
               {/* Phone number */}
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mobile phone number <span className="text-red-500">*</span>
+                  Mobile phone number <span className="text-sm font-normal text-gray-500 ml-1">(number to receive SMS messages)</span> <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="phone"
@@ -134,43 +138,56 @@ export default function SmsOptInPage() {
                 />
               </div>
 
-              {/* Consent checkbox — NOT pre-checked, required */}
-              <div className="flex gap-3 items-start">
-                <input
-                  id="sms-consent"
-                  type="checkbox"
-                  checked={consented}
-                  onChange={e => setConsented(e.target.checked)}
-                  required
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="sms-consent" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
-                  By checking this box, I consent to receive recurring automated transactional SMS
-                  messages from <strong>{COMPANY_NAME}</strong> (via the Elev8 Comply platform) at the
-                  mobile number provided above, including scheduling confirmations, 48-hour advance
-                  notices, and work order updates related to my elevator compliance service.{' '}
-                  <strong>Message and data rates may apply. Message frequency varies.</strong>{' '}
-                  Reply <strong>STOP</strong> to opt out at any time. Reply <strong>HELP</strong> for
-                  assistance. See our{' '}
-                  <Link href="/privacy" className="text-blue-600 underline">Privacy Policy</Link>{' '}
-                  and{' '}
-                  <Link href="/terms" className="text-blue-600 underline">Terms of Service</Link>{' '}
-                  for details. Mobile opt-in information is never shared with third parties for
-                  marketing purposes.
-                </label>
+              {/* Consent checkbox — NOT required; submit button is disabled until checked */}
+              <div className="bg-white border border-blue-200 rounded-lg p-4">
+                <div className="flex gap-3 items-start">
+                  <input
+                    id="sms-consent"
+                    type="checkbox"
+                    checked={consented}
+                    onChange={e => setConsented(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                  />
+                  <label htmlFor="sms-consent" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
+                    By checking this box, I voluntarily agree to receive recurring automated
+                    transactional SMS messages from <strong>{COMPANY_NAME}</strong> (via the Elev8
+                    Comply platform) at the mobile number I provided above. Messages may include
+                    scheduling confirmations, 48-hour advance notices, and work order updates
+                    related to my elevator compliance service.{' '}
+                    <strong>Message and data rates may apply. Message frequency varies.</strong>{' '}
+                    Reply <strong>STOP</strong> to opt out at any time. Reply <strong>HELP</strong>{' '}
+                    for assistance. See our{' '}
+                    <Link href="/privacy" className="text-blue-600 underline">Privacy Policy</Link>{' '}
+                    and{' '}
+                    <Link href="/terms" className="text-blue-600 underline">Terms of Service</Link>{' '}
+                    for details. Mobile opt-in data is never shared with third parties for
+                    marketing purposes.
+                  </label>
+                </div>
+                {!consented && (
+                  <p className="mt-2 ml-7 text-xs text-gray-400">
+                    Check the box above to enable the opt-in button.
+                  </p>
+                )}
               </div>
 
               {error && (
                 <p className="text-sm text-red-600">{error}</p>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
-              >
-                {loading ? 'Saving…' : 'Opt in to SMS notifications'}
-              </button>
+              {/* Submit button — disabled until consent is given */}
+              <div>
+                <button
+                  type="submit"
+                  disabled={!consented || loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white disabled:text-gray-500 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+                >
+                  {loading ? 'Saving…' : 'Opt in to SMS notifications'}
+                </button>
+                <p className="mt-2 text-xs text-gray-400">
+                  SMS consent is optional. You can use Elev8 Comply without opting in to SMS.
+                </p>
+              </div>
             </form>
           )}
         </section>
@@ -189,8 +206,8 @@ export default function SmsOptInPage() {
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">2</div>
               <div>
-                <p className="font-medium text-gray-900">Explicit consent</p>
-                <p className="text-sm text-gray-600 mt-0.5">You actively opt in above — the consent checkbox is never pre-selected. You choose to receive messages.</p>
+                <p className="font-medium text-gray-900">Voluntary opt-in</p>
+                <p className="text-sm text-gray-600 mt-0.5">SMS messaging is entirely optional. You actively opt in by checking the consent box above — it is never pre-selected and is never required to use our service. The opt-in button becomes available only after you voluntarily check the consent box.</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -198,6 +215,13 @@ export default function SmsOptInPage() {
               <div>
                 <p className="font-medium text-gray-900">Messages begin when work is scheduled</p>
                 <p className="text-sm text-gray-600 mt-0.5">SMS messages are sent only when there is active work on your account — scheduling confirmations, 48-hour advance notices, and work order updates.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">4</div>
+              <div>
+                <p className="font-medium text-gray-900">Opt out any time</p>
+                <p className="text-sm text-gray-600 mt-0.5">Reply <strong>STOP</strong> to any message to immediately stop all SMS messages. You&apos;ll receive one final confirmation, then no further messages will be sent.</p>
               </div>
             </div>
           </div>

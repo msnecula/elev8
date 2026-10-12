@@ -227,6 +227,54 @@ export default function SmsOptInPage() {
           </div>
         </section>
 
+        {/* Confirmation Flow */}
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-gray-900 mb-1">Confirmation Flow</h2>
+          <p className="text-sm text-gray-500 mb-6">Here is exactly what you will receive after opting in, and what happens when you reply STOP.</p>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* Welcome confirmation */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">After opting in</p>
+              <div className="bg-gray-100 rounded-2xl p-4 space-y-3">
+                {/* incoming bubble */}
+                <div className="flex items-end gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">P</div>
+                  <div className="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
+                    <p className="text-xs text-gray-800 leading-relaxed">
+                      <strong>Precision Lift Co.:</strong> You&apos;re now enrolled in SMS notifications for your elevator compliance service. You&apos;ll receive scheduling confirmations and advance notices when work is active. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help.
+                    </p>
+                  </div>
+                </div>
+                <p className="text-center text-xs text-gray-400">Welcome confirmation sent immediately after opt-in</p>
+              </div>
+            </div>
+
+            {/* Opt-out flow */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">When you reply STOP</p>
+              <div className="bg-gray-100 rounded-2xl p-4 space-y-3">
+                {/* outgoing STOP */}
+                <div className="flex justify-end">
+                  <div className="bg-blue-500 rounded-2xl rounded-br-sm px-3 py-2 shadow-sm max-w-xs">
+                    <p className="text-xs text-white font-medium">STOP</p>
+                  </div>
+                </div>
+                {/* incoming unsubscribe confirmation */}
+                <div className="flex items-end gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">P</div>
+                  <div className="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
+                    <p className="text-xs text-gray-800 leading-relaxed">
+                      <strong>Precision Lift Co.:</strong> You have been unsubscribed. No further SMS messages will be sent to this number. To re-enroll, visit elev8comply.com/sms.
+                    </p>
+                  </div>
+                </div>
+                <p className="text-center text-xs text-gray-400">Unsubscribe confirmed — no further messages sent</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Message types */}
         <section className="mb-10">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Types of Messages You May Receive</h2>

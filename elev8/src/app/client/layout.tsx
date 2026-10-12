@@ -11,27 +11,37 @@ export default async function ClientLayout({ children }: { children: React.React
   // Non-client users should not be in the client portal
   if (user.role !== 'client') redirect('/dashboard');
 
-  // Fetch account name + SMS consent status in one query set
-  const [accountRow, userRow] = await Promise.all([
-    user.accountId
-      ? db.query.accounts.findFirst({
-          where: eq(accounts.id, user.accountId),
-          columns: { name: true },
-        })
-      : Promise.resolve(undefined),
-    db.query.users.findFirst({
+  // Fetch account name separately — never crashes
+  const accountRow = user.accountId
+    ? await db.query.accounts.findFirst({
+        where: eq(accounts.id, user.accountId),
+        columns: { name: true },
+      })
+    : undefined;
+
+  // SMS consent columns require migration 05 (05_sms_consent.sql).
+  // Default smsConsentGiven=true so the modal is suppressed if the migration
+  // hasn't been run yet — prevents a crash on every client page.
+  let smsConsentGiven = true;
+  let phone: string | undefined;
+  try {
+    const userRow = await db.query.users.findFirst({
       where: eq(users.id, user.id),
       columns: { smsConsentGiven: true, phone: true },
-    }),
-  ]);
+    });
+    smsConsentGiven = userRow?.smsConsentGiven ?? true;
+    phone = userRow?.phone ?? undefined;
+  } catch {
+    // Migration 05 not yet applied — safe defaults used above
+  }
 
   return (
     <ClientShell
       fullName={user.fullName || user.email}
       email={user.email}
       accountName={accountRow?.name}
-      smsConsentGiven={userRow?.smsConsentGiven ?? false}
-      phone={userRow?.phone ?? undefined}
+      smsConsentGiven={smsConsentGiven}
+      phone={phone}
     >
       {children}
     </ClientShell>

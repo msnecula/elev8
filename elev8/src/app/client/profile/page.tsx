@@ -10,18 +10,37 @@ export const metadata: Metadata = { title: 'My Profile' };
 export default async function ClientProfilePage() {
   const user = await requireUser();
 
-  const userRow = await db.query.users.findFirst({
+  // Base row — columns that always exist (no migration dependency)
+  const baseRow = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: {
-      fullName: true,
-      email: true,
-      phone: true,
-      smsConsentGiven: true,
-      smsConsentGivenAt: true,
-      smsPhone: true,
-      smsConsentRevokedAt: true,
-    },
+    columns: { fullName: true, email: true, phone: true },
   });
+
+  // SMS consent columns require migration 05 (05_sms_consent.sql).
+  // Default to safe values so the profile page renders even if migration is pending.
+  let smsConsentGiven = false;
+  let smsConsentGivenAt: Date | null = null;
+  let smsPhone: string | null = null;
+  let smsConsentRevokedAt: Date | null = null;
+  try {
+    const smsRow = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: {
+        smsConsentGiven: true,
+        smsConsentGivenAt: true,
+        smsPhone: true,
+        smsConsentRevokedAt: true,
+      },
+    });
+    if (smsRow) {
+      smsConsentGiven = smsRow.smsConsentGiven;
+      smsConsentGivenAt = smsRow.smsConsentGivenAt;
+      smsPhone = smsRow.smsPhone;
+      smsConsentRevokedAt = smsRow.smsConsentRevokedAt;
+    }
+  } catch {
+    // Migration 05 not yet applied — SMS panel renders with empty defaults
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -36,16 +55,16 @@ export default async function ClientProfilePage() {
         <div className="grid gap-3">
           <div className="flex items-center justify-between py-2 border-b border-slate-100">
             <span className="text-sm text-slate-500">Name</span>
-            <span className="text-sm font-medium text-slate-900">{userRow?.fullName || user.fullName}</span>
+            <span className="text-sm font-medium text-slate-900">{baseRow?.fullName || user.fullName}</span>
           </div>
           <div className="flex items-center justify-between py-2 border-b border-slate-100">
             <span className="text-sm text-slate-500">Email</span>
             <span className="text-sm font-medium text-slate-900">{user.email}</span>
           </div>
-          {userRow?.phone && (
+          {baseRow?.phone && (
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-500">Phone</span>
-              <span className="text-sm font-medium text-slate-900">{userRow.phone}</span>
+              <span className="text-sm font-medium text-slate-900">{baseRow.phone}</span>
             </div>
           )}
         </div>
@@ -53,11 +72,11 @@ export default async function ClientProfilePage() {
 
       {/* SMS consent panel — client component handles opt-in / revoke */}
       <SMSConsentPanel
-        smsConsentGiven={userRow?.smsConsentGiven ?? false}
-        smsPhone={userRow?.smsPhone ?? null}
-        smsConsentGivenAt={userRow?.smsConsentGivenAt?.toISOString() ?? null}
-        smsConsentRevokedAt={userRow?.smsConsentRevokedAt?.toISOString() ?? null}
-        defaultPhone={userRow?.phone ?? undefined}
+        smsConsentGiven={smsConsentGiven}
+        smsPhone={smsPhone}
+        smsConsentGivenAt={smsConsentGivenAt?.toISOString() ?? null}
+        smsConsentRevokedAt={smsConsentRevokedAt?.toISOString() ?? null}
+        defaultPhone={baseRow?.phone ?? undefined}
       />
     </div>
   );

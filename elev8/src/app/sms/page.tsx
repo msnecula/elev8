@@ -93,7 +93,7 @@ export default function SmsOptInPage() {
               {/* Full name */}
               <div>
                 <label htmlFor="sms-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full name <span className="text-red-500">*</span>
+                  Full name
                 </label>
                 <input
                   id="sms-name"
@@ -109,7 +109,7 @@ export default function SmsOptInPage() {
               {/* Email */}
               <div>
                 <label htmlFor="sms-email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email address <span className="text-sm font-normal text-gray-500 ml-1">(to confirm your opt-in)</span> <span className="text-red-500">*</span>
+                  Email address <span className="text-sm font-normal text-gray-500 ml-1">(to confirm your opt-in)</span>
                 </label>
                 <input
                   id="sms-email"
@@ -125,7 +125,7 @@ export default function SmsOptInPage() {
               {/* Phone number */}
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mobile phone number <span className="text-sm font-normal text-gray-500 ml-1">(number to receive SMS messages)</span> <span className="text-red-500">*</span>
+                  Mobile phone number <span className="text-sm font-normal text-gray-500 ml-1">(number to receive SMS messages)</span>
                 </label>
                 <input
                   id="phone"

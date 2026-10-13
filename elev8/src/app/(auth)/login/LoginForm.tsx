@@ -100,7 +100,11 @@ export default function LoginForm({
           <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
             Terms of Service
           </Link>
-          . SMS advance notices are sent to property managers per Cal/OSHA requirements.
+          .{' '}
+          <Link href="/sms" className="text-blue-600 underline underline-offset-2 hover:text-blue-800">
+            SMS advance notices
+          </Link>
+          {' '}are sent to property managers per Cal/OSHA requirements.
           Mobile opt-in data is never shared with third parties for marketing purposes.
           Reply STOP to opt out.
         </p>

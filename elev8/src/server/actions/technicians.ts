@@ -30,3 +30,27 @@ export async function updateTechnicianCccmLicense(
 
   return { success: true, data: null };
 }
+
+// ── Update a technician's QEI Number ──────────────────────────────────────────
+
+export async function updateTechnicianQeiNumber(
+  technicianId: string,
+  qeiNumber: string,
+): Promise<ActionResult<null>> {
+  await requireRole('admin', 'dispatcher');
+
+  if (!technicianId) {
+    return { success: false, error: 'Technician ID is required' };
+  }
+
+  const trimmed = qeiNumber.trim();
+
+  await db
+    .update(technicians)
+    .set({ qeiNumber: trimmed || null, updatedAt: new Date() })
+    .where(eq(technicians.id, technicianId));
+
+  revalidatePath('/settings/technicians');
+
+  return { success: true, data: null };
+}

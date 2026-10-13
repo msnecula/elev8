@@ -295,6 +295,7 @@ export function buildFieldMappings(
 
   const mechanicName    = String(jobData?.mechanicName    ?? '');
   const mechanicLicense = String(jobData?.mechanicLicense ?? cccmLicense);
+  const inspectorQei    = String(jobData?.qeiNumber       ?? qeiNumber);
   const testDate        = String(jobData?.testDate        ?? '');
   const testTime        = String(jobData?.testTime        ?? '');
 
@@ -468,7 +469,7 @@ export function buildFieldMappings(
     // 'Cert Expiration Date' — leave for user
 
     // CQCC (company cert number)
-    set(qeiNumber, 'CQCC');
+    set(inspectorQei, 'CQCC');
 
     // Driving machine type checkboxes
     const isDirectHydraulic = elevatorType.includes('direct');
@@ -494,7 +495,7 @@ export function buildFieldMappings(
     // 'Cert Expiration Date' — leave for user
 
     // CQCC
-    set(qeiNumber, 'CQCC');
+    set(inspectorQei, 'CQCC');
     // Note: Row test results (Choice1-Choice6 button groups per row) are filled manually
   }
 
@@ -533,7 +534,7 @@ export function buildFieldMappings(
     set(companyName,  'Elevator Company Name');
     set(companyPhone, 'Telephone Number');
     set(companyAddr,  'Billing Address');
-    set(qeiNumber,    'CQCC #');
+    set(inspectorQei,    'CQCC #');
     set(propertyName, 'Building Name');
     set(streetOnly,   'Street');
     set(city,         'City');
@@ -548,7 +549,7 @@ export function buildFieldMappings(
     set(companyName,  'Elevator Company Name');
     set(companyPhone, 'Telephone Number');
     set(companyAddr,  'Billing Address');
-    set(qeiNumber,    'CQCC #');
+    set(inspectorQei,    'CQCC #');
     set(propertyName, 'Building Name');
     set(streetOnly,   'Street');
     set(city,         'City');
@@ -590,7 +591,7 @@ export function buildFieldMappings(
     // ─ Monthly Fire Testing Log (45 fields) ─────────────────────────────────
     set(streetOnly,  'JOB LOCATION');
     set(companyName, 'ELEVATOR COMPANY');
-    set(qeiNumber,   'CQCC NUMBER');
+    set(inspectorQei,   'CQCC NUMBER');
     set(equipmentId, 'STATE NUMBER');
     // 'FIRE KEY NUMBER' and 'YEAR' — left for user
     // Monthly fields (PRINT MECHANICS NAME [MON], MECHANICS SIGNATURE [MON],
@@ -606,7 +607,7 @@ export function buildFieldMappings(
 
     // CQCC info
     set(companyName,  'CQCC Business Name');
-    set(qeiNumber,    'CQCC cert');
+    set(inspectorQei,    'CQCC cert');
 
     // CCCM performing work (primary)
     set(mechanicName,    'CCCM Name1');

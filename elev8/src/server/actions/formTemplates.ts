@@ -286,8 +286,9 @@ export async function generateFilledForm(input: {
           const { wo, tech } = woRows[0];
           jobData = {
             mechanicName: tech?.fullName ?? '',
-            // leave undefined if no license — lets formTemplateService fall back to CCCM_LICENSE env var
+            // leave undefined if no license/QEI — lets formTemplateService fall back to env vars
             mechanicLicense: tech?.cccmLicense ?? undefined,
+            qeiNumber: tech?.qeiNumber ?? undefined,
             testDate: wo.scheduledStart
               ? new Date(wo.scheduledStart).toLocaleDateString('en-US')
               : '',
@@ -313,8 +314,9 @@ export async function generateFilledForm(input: {
       const { wo, tech } = woRows[0];
       jobData = {
         mechanicName: tech?.fullName ?? '',
-        // leave undefined if no license — lets formTemplateService fall back to CCCM_LICENSE env var
+        // leave undefined if no license/QEI — lets formTemplateService fall back to env vars
         mechanicLicense: tech?.cccmLicense ?? undefined,
+        qeiNumber: tech?.qeiNumber ?? undefined,
         testDate: wo.scheduledStart
           ? new Date(wo.scheduledStart).toLocaleDateString('en-US')
           : '',

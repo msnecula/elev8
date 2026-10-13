@@ -52,10 +52,20 @@ export default function SmsOptInPage() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
-          <span className="text-xl font-bold text-blue-700">Elev8 Comply</span>
-          <span className="text-gray-300">|</span>
-          <span className="text-sm text-gray-500">by {COMPANY_NAME}</span>
+        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-xl font-bold text-blue-700 hover:text-blue-800 transition-colors">
+              Elev8 Comply
+            </Link>
+            <span className="text-gray-300">|</span>
+            <span className="text-sm text-gray-500">by {COMPANY_NAME}</span>
+          </div>
+          <Link
+            href="/login"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+          >
+            Sign in →
+          </Link>
         </div>
       </header>
 

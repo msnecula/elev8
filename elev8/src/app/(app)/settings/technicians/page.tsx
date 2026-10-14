@@ -90,9 +90,11 @@ export default async function TechnicianLicensesPage() {
             QEI Numbers
           </CardTitle>
           <CardDescription>
-            QEI (Qualified Elevator Inspector) numbers are assigned to individual inspectors by the
-            state. These auto-populate on DOSH-100, EU-630, and EU-632 forms when the technician
-            is assigned to a job.
+            QEI (Qualified Elevator Inspector) is a national certification under the ASME QEI-1
+            standard, issued to individual inspectors by ANAB-accredited organizations such as NAESA
+            International — not by the state. Only enter a number for technicians who hold a current
+            QEI certification. These auto-populate on DOSH-100, EU-630, and EU-632 forms when the
+            technician is assigned to a job.
           </CardDescription>
         </CardHeader>
         <CardContent>

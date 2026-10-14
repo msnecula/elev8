@@ -47,7 +47,7 @@ Copy-Item .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API |
-| `DATABASE_URL` | Supabase → Settings → Database → **Session Pooler** URI |
+| `DATABASE_URL` | Supabase → Settings → Database → **Transaction Pooler** URI |
 | `DIRECT_DATABASE_URL` | Supabase → Settings → Database → **Direct** connection URI |
 | `OPENAI_API_KEY` | platform.openai.com → API Keys |
 | `RESEND_API_KEY` | resend.com → API Keys |
@@ -56,7 +56,7 @@ Copy-Item .env.example .env.local
 | `TWILIO_AUTH_TOKEN` | console.twilio.com |
 | `TWILIO_FROM_NUMBER` | Your Twilio phone number |
 
-**Important:** Use the **Session Pooler** URL for `DATABASE_URL` (port 5432, hostname `aws-0-xxx.pooler.supabase.com`). This fixes IPv6 timeout errors on Windows.
+**Important:** Use the **Transaction Pooler** URL for `DATABASE_URL` (port 6543, hostname `aws-0-xxx.pooler.supabase.com`). The pooler fixes IPv6 timeout errors on Windows, and transaction mode doesn't run out of connections on Vercel the way the Session Pooler (port 5432, capped at 15 clients) does. A Session Pooler URL still works: the app switches it to port 6543 automatically (`src/server/db/poolerUrl.ts`).
 
 ---
 

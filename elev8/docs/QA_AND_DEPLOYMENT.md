@@ -159,7 +159,7 @@ In Vercel Dashboard → Project → Settings → Environment Variables, add ALL 
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API |
-| `DATABASE_URL` | Supabase → Settings → Database → Session Pooler URI |
+| `DATABASE_URL` | Supabase → Settings → Database → Transaction Pooler URI (port 6543) |
 | `OPENAI_API_KEY` | platform.openai.com → API Keys |
 | `RESEND_API_KEY` | resend.com → API Keys |
 | `RESEND_FROM_EMAIL` | Your verified Resend domain |
@@ -231,8 +231,9 @@ After deployment, check Vercel Dashboard → Deployments → Functions → Cron 
 | Emails not arriving | Check Resend domain verification and DKIM/SPF records |
 | SMS not sending | Verify Twilio number is active and FROM number matches registered number |
 | Cron not firing | Cron requires Vercel Pro plan on production |
-| DB connection fails | Use Session Pooler URL (port 5432) not Direct connection in production |
-| IPv6 timeout | Switch DATABASE_URL to Session Pooler (`aws-0-xxx.pooler.supabase.com`) |
+| DB connection fails | Use Transaction Pooler URL (port 6543) not Direct connection in production |
+| `EMAXCONNSESSION` / "max clients reached in session mode" (pages return 500) | DATABASE_URL points at the Session Pooler (port 5432, max 15 clients). The app switches Supabase pooler URLs to transaction mode (port 6543) automatically — make sure the latest code is deployed |
+| IPv6 timeout | Switch DATABASE_URL to the Transaction Pooler (`aws-0-xxx.pooler.supabase.com:6543`) |
 
 ---
 
@@ -240,7 +241,7 @@ After deployment, check Vercel Dashboard → Deployments → Functions → Cron 
 
 | Setting | Local Dev | Production |
 |---|---|---|
-| DATABASE_URL | Session Pooler or Direct | Session Pooler |
+| DATABASE_URL | Transaction Pooler or Direct | Transaction Pooler |
 | NEXT_PUBLIC_APP_URL | http://localhost:3000 | https://your-app.vercel.app |
 | Email sending | Resend (test mode OK) | Resend (verified domain required) |
 | SMS sending | Twilio test credentials OK | Twilio live credentials |

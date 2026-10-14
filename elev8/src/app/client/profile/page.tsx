@@ -3,7 +3,9 @@ import { requireUser } from '@/lib/auth';
 import { db } from '@/server/db/client';
 import { users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
-import SMSConsentPanel from './SMSConsentPanel';
+import SMSConsentPanel from '@/components/account/SMSConsentPanel';
+import ProfileForm from '@/components/account/ProfileForm';
+import PasswordForm from '@/components/account/PasswordForm';
 
 export const metadata: Metadata = { title: 'My Profile' };
 
@@ -52,22 +54,19 @@ export default async function ClientProfilePage() {
       {/* Account info */}
       <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
         <h2 className="text-base font-semibold text-slate-800">Account Information</h2>
-        <div className="grid gap-3">
-          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-            <span className="text-sm text-slate-500">Name</span>
-            <span className="text-sm font-medium text-slate-900">{baseRow?.fullName || user.fullName}</span>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-slate-100">
-            <span className="text-sm text-slate-500">Email</span>
-            <span className="text-sm font-medium text-slate-900">{user.email}</span>
-          </div>
-          {baseRow?.phone && (
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-slate-500">Phone</span>
-              <span className="text-sm font-medium text-slate-900">{baseRow.phone}</span>
-            </div>
-          )}
+        <ProfileForm
+          fullName={baseRow?.fullName || user.fullName}
+          email={baseRow?.email ?? user.email}
+          phone={baseRow?.phone ?? null}
+        />
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-slate-800">Password</h2>
+          <p className="text-sm text-slate-500 mt-1">Choose a new password of at least 8 characters.</p>
         </div>
+        <PasswordForm />
       </section>
 
       {/* SMS consent panel — client component handles opt-in / revoke */}

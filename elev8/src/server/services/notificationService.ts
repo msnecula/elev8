@@ -5,7 +5,8 @@ import { eq } from 'drizzle-orm';
 import { render } from '@react-email/render';
 import { EMAIL_FROM } from '@/lib/resend';
 import { formatDate, formatCurrency } from '@/lib/utils';
-import { APP_URL } from '@/lib/constants';
+import { APP_NAME, APP_URL } from '@/lib/constants';
+import type { UserRole } from '@/types/auth';
 
 // ─── Core send helpers ────────────────────────────────────────────────────────
 
@@ -279,20 +280,27 @@ export async function sendDispatchEmail({
 }
 
 export async function sendInviteEmail({
-  to, inviteeName, accountName, inviteUrl,
+  to, inviteeName, role, accountName, inviteUrl, isReminder, userId,
 }: {
   to: string;
   inviteeName: string;
-  accountName: string;
+  role: UserRole;
+  accountName?: string;
   inviteUrl: string;
+  isReminder?: boolean;
+  userId?: string;
 }) {
   const { InviteEmail } = await import('@/emails/InviteEmail');
-  const html = await render(InviteEmail({ inviteeName, accountName, inviteUrl }));
+  const html = await render(InviteEmail({ inviteeName, role, accountName, inviteUrl, isReminder }));
+  const where = role === 'client' && accountName ? ` — ${accountName}` : '';
 
   return sendEmail({
     to,
-    subject: `You're invited to Elev8 Comply — ${accountName}`,
+    subject: isReminder
+      ? `Set your ${APP_NAME} password`
+      : `You're invited to ${APP_NAME}${where}`,
     html,
+    userId,
   });
 }
 

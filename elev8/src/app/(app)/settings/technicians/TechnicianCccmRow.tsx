@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { updateTechnicianCccmLicense } from '@/server/actions/technicians';
-import { Check, Loader2, Pencil, X } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, X } from 'lucide-react';
 
 interface Props {
   technicianId: string;
@@ -112,13 +112,14 @@ export default function TechnicianCccmRow({
               {saved || '—'}
             </span>
             <Button
-              size="icon"
+              size="sm"
               variant="ghost"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="h-8 w-16 px-2 text-blue-600 hover:text-blue-800"
               onClick={handleEdit}
-              title="Edit CCCM License"
+              title={saved ? 'Edit CCCM License' : 'Add CCCM License'}
             >
-              <Pencil className="h-3.5 w-3.5" />
+              {saved ? <Pencil className="h-3.5 w-3.5 mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
+              {saved ? 'Edit' : 'Add'}
             </Button>
           </>
         )}

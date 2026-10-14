@@ -15,8 +15,12 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   // (user_metadata in JWTs can be stale or missing for admin accounts)
   const dbUser = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { role: true, accountId: true, fullName: true },
+    columns: { role: true, accountId: true, fullName: true, isActive: true },
   });
+
+  // Deactivated by an admin: treat an existing session as signed out. (New sign-ins
+  // are already blocked by the Supabase ban set in setUserActive.)
+  if (dbUser && !dbUser.isActive) return null;
 
   // If the user row is missing from the DB (e.g. seed didn't run or UUID mismatch),
   // fall back to JWT metadata so the session isn't bricked.

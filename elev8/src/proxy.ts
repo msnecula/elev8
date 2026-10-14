@@ -55,11 +55,12 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(new URL('/dashboard', request.url), supabaseResponse);
   }
 
-  // Technicians only see /technician and /dashboard
+  // Technicians only see /technician, /dashboard and their own /account
   if (
     role === 'technician' &&
     !pathname.startsWith('/technician') &&
     !pathname.startsWith('/dashboard') &&
+    !pathname.startsWith('/account') &&
     !pathname.startsWith('/api')
   ) {
     return redirectWithCookies(new URL('/technician', request.url), supabaseResponse);

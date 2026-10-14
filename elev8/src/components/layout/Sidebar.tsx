@@ -8,7 +8,7 @@ import { APP_NAME } from '@/lib/constants';
 import type { UserRole } from '@/types/auth';
 import {
   FileText, Briefcase, Truck, ClipboardList,
-  Settings, LogOut, Bell, Calendar, FolderOpen, Building2, LayoutDashboard,
+  Settings, LogOut, Bell, Calendar, FolderOpen, Building2, LayoutDashboard, UserCircle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'dispatcher'], matchPrefix: true },
   { label: 'Properties', href: '/properties', icon: Building2, roles: ['admin'], matchPrefix: true },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
+  { label: 'My Account', href: '/account', icon: UserCircle, roles: ['admin', 'reviewer', 'dispatcher', 'technician'] },
 ];
 
 interface SidebarProps {

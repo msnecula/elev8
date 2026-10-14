@@ -19,6 +19,13 @@ const loginSchema = z.object({
 });
 type LoginInput = z.infer<typeof loginSchema>;
 
+const ERROR_PARAM_MESSAGES: Record<string, string> = {
+  auth_callback_failed: 'Authentication failed. Please try again.',
+  invite_link_invalid:
+    'That link has expired or was already used. Ask your administrator to resend your invite, or use "Forgot password".',
+  account_deactivated: 'This account has been deactivated. Contact your administrator.',
+};
+
 export default function LoginForm({
   redirectTo,
   errorParam,
@@ -30,7 +37,7 @@ export default function LoginForm({
   const supabase = createClient();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(
-    errorParam === 'auth_callback_failed' ? 'Authentication failed. Please try again.' : null,
+    (errorParam && ERROR_PARAM_MESSAGES[errorParam]) || null,
   );
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginInput>({
@@ -41,9 +48,11 @@ export default function LoginForm({
     setServerError(null);
     const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
     if (error) {
-      setServerError(error.message === 'Invalid login credentials'
-        ? 'Incorrect email or password.'
-        : error.message);
+      setServerError(
+        error.message === 'Invalid login credentials' ? 'Incorrect email or password.'
+        : /banned/i.test(error.message) ? ERROR_PARAM_MESSAGES.account_deactivated
+        : error.message,
+      );
       return;
     }
     router.push(redirectTo ?? '/dashboard');

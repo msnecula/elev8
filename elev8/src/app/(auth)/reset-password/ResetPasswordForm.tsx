@@ -33,7 +33,9 @@ export default function ResetPasswordForm() {
     setServerError(null);
     const { error } = await supabase.auth.updateUser({ password: data.password });
     if (error) { setServerError(error.message); return; }
-    router.push('/login?message=password_updated');
+    // The invite / reset link already signed them in; /dashboard routes each role home.
+    router.push('/dashboard');
+    router.refresh();
   }
 
   return (

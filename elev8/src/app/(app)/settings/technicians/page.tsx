@@ -5,14 +5,16 @@ import { technicians } from '@/drizzle/schema';
 import { asc } from 'drizzle-orm';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShieldCheck, ClipboardCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ShieldCheck, ClipboardCheck, UserPlus } from 'lucide-react';
 import TechnicianCccmRow from './TechnicianCccmRow';
 import TechnicianQeiRow from './TechnicianQeiRow';
 
 export const metadata: Metadata = { title: 'Technician Licenses' };
 
 export default async function TechnicianLicensesPage() {
-  await requireRole('admin', 'dispatcher');
+  const currentUser = await requireRole('admin', 'dispatcher');
 
   const techs = await db
     .select({
@@ -28,7 +30,7 @@ export default async function TechnicianLicensesPage() {
 
   const emptyState = (
     <p className="text-sm text-muted-foreground py-4 text-center">
-      No technicians found. Technician profiles are created when a user with the Technician role logs in.
+      No technicians yet. Add one with the &quot;Add Technician&quot; button above.
     </p>
   );
 
@@ -37,7 +39,7 @@ export default async function TechnicianLicensesPage() {
       <p className="flex-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
         Technician
       </p>
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide w-36 text-right pr-10">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide w-[13.5rem] text-right pr-[4.5rem]">
         {label}
       </p>
     </div>
@@ -47,8 +49,17 @@ export default async function TechnicianLicensesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Technician Licenses"
-        description="Manage CCCM license numbers and QEI numbers for each technician. These auto-populate on Cal/OSHA forms when the technician is assigned to a job."
-      />
+        description="Manage CCCM license numbers and QEI numbers for each technician. These auto-populate on Cal/OSHA forms when the technician is assigned to a job. Technicians can also enter their own numbers from My Account."
+      >
+        {currentUser.role === 'admin' && (
+          <Button asChild size="sm">
+            <Link href="/settings/users/new?role=technician">
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Add Technician
+            </Link>
+          </Button>
+        )}
+      </PageHeader>
 
       {/* CCCM Card */}
       <Card>

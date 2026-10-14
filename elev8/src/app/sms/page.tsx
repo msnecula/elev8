@@ -6,17 +6,34 @@ import Link from 'next/link';
 const COMPANY_NAME = 'Precision Lift Co.';
 const COMPANY_PHONE = '562 304-9444';
 
+// SMS is optional (A2P 10DLC): the visitor picks "yes" or "no" — or skips the form
+// entirely — and either answer is accepted. The two boxes exclude each other, and
+// a phone number is only asked for when they opt in.
+type SmsChoice = 'opt_in' | 'opt_out' | null;
+
 export default function SmsOptInPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [consented, setConsented] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [choice, setChoice] = useState<SmsChoice>(null);
+  const [submitted, setSubmitted] = useState<SmsChoice>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const optingIn = choice === 'opt_in';
+  const optingOut = choice === 'opt_out';
+
+  function toggle(which: Exclude<SmsChoice, null>, checked: boolean) {
+    setChoice(checked ? which : null);
+    setError('');
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!choice) {
+      setError('Choose whether you would like SMS messages, or use the skip link below.');
+      return;
+    }
     if (!name.trim()) {
       setError('Please enter your full name.');
       return;
@@ -25,8 +42,8 @@ export default function SmsOptInPage() {
       setError('Please enter a valid email address.');
       return;
     }
-    if (!phone.replace(/\D/g, '').match(/^\d{10}$/)) {
-      setError('Please enter a valid 10-digit US mobile phone number.');
+    if (optingIn && !phone.replace(/\D/g, '').match(/^\d{10}$/)) {
+      setError('Please enter a valid 10-digit US mobile phone number to receive SMS messages.');
       return;
     }
 
@@ -37,13 +54,17 @@ export default function SmsOptInPage() {
       await fetch('/api/public/sms-opt-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), phone }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: optingIn ? phone : '',
+          choice,
+        }),
       });
-      setSubmitted(true);
     } catch {
-      // Network error — still show success so Twilio reviewers see the full flow
-      setSubmitted(true);
+      // Network error — still show the confirmation so reviewers see the full flow
     } finally {
+      setSubmitted(choice);
       setLoading(false);
     }
   }
@@ -75,14 +96,26 @@ export default function SmsOptInPage() {
 
         {/* Opt-in form */}
         <section className="mb-10 border border-blue-200 rounded-xl p-6 bg-blue-50">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Opt In to SMS Notifications</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">SMS Notifications — Your Choice</h2>
           <p className="text-sm text-gray-600 mb-5">
-            If you would like to receive transactional SMS updates about your elevator compliance
-            service with {COMPANY_NAME}, enter your information below and check the consent box.
-            This is entirely optional — SMS consent is not required to use our service.
+            Choose whether {COMPANY_NAME} may send you transactional SMS updates about your
+            elevator compliance service. <strong>SMS is entirely optional</strong> — you
+            can say no, or skip this form, and still use all of our services and the Elev8 Comply
+            platform.
           </p>
 
-          {submitted ? (
+          {submitted === 'opt_out' ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+              <p className="font-semibold text-gray-800 mb-2 text-lg">Got it — no SMS messages</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {COMPANY_NAME} won&apos;t send you SMS messages. You can keep using Elev8
+                Comply as usual, and you can opt in later from this page or your account profile.
+              </p>
+              <Link href="/login" className="inline-block mt-4 text-sm text-blue-600 hover:underline">
+                Continue to Elev8 Comply →
+              </Link>
+            </div>
+          ) : submitted === 'opt_in' ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
               <div className="text-green-600 text-3xl mb-3">✓</div>
               <p className="font-semibold text-green-800 mb-2 text-lg">You&apos;re opted in!</p>
@@ -135,30 +168,37 @@ export default function SmsOptInPage() {
               {/* Phone number */}
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Mobile phone number <span className="text-sm font-normal text-gray-500 ml-1">(number to receive SMS messages)</span>
+                  Mobile phone number <span className="text-sm font-normal text-gray-500 ml-1">(only needed if you opt in)</span>
                 </label>
                 <input
                   id="phone"
                   type="tel"
-                  value={phone}
+                  value={optingOut ? '' : phone}
                   onChange={e => setPhone(e.target.value)}
-                  placeholder="(555) 000-0000"
-                  required
-                  className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={optingOut ? 'Not needed — you chose no SMS' : '(555) 000-0000'}
+                  disabled={optingOut}
+                  className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
 
-              {/* Consent checkbox — NOT required; submit button is disabled until checked */}
-              <div className="bg-white border border-blue-200 rounded-lg p-4">
+              {/* The choice: two optional, mutually exclusive boxes — neither is pre-selected */}
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium text-gray-700 mb-2">
+                  Would you like to receive SMS messages? <span className="font-normal text-gray-500">(optional — choose one)</span>
+                </legend>
+
+              <div className={`bg-white border rounded-lg p-4 ${optingOut ? 'border-gray-200 opacity-50' : 'border-blue-200'}`}>
                 <div className="flex gap-3 items-start">
                   <input
                     id="sms-consent"
                     type="checkbox"
-                    checked={consented}
-                    onChange={e => setConsented(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                    checked={optingIn}
+                    disabled={optingOut}
+                    onChange={e => toggle('opt_in', e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                   />
                   <label htmlFor="sms-consent" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
+                    <strong>Yes, send me SMS updates.</strong>{' '}
                     By checking this box, I voluntarily agree to receive recurring automated
                     transactional SMS messages from <strong>{COMPANY_NAME}</strong> (via the Elev8
                     Comply platform) at the mobile number I provided above. Messages may include
@@ -174,28 +214,46 @@ export default function SmsOptInPage() {
                     marketing purposes.
                   </label>
                 </div>
-                {!consented && (
-                  <p className="mt-2 ml-7 text-xs text-gray-400">
-                    Check the box above to enable the opt-in button.
-                  </p>
-                )}
               </div>
+
+              <div className={`bg-white border rounded-lg p-4 ${optingIn ? 'border-gray-200 opacity-50' : 'border-gray-300'}`}>
+                <div className="flex gap-3 items-start">
+                  <input
+                    id="sms-decline"
+                    type="checkbox"
+                    checked={optingOut}
+                    disabled={optingIn}
+                    onChange={e => toggle('opt_out', e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
+                  />
+                  <label htmlFor="sms-decline" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
+                    <strong>No thanks, I don&apos;t want SMS messages.</strong> I&apos;ll still receive
+                    updates by email and can use all {COMPANY_NAME} services and the Elev8 Comply
+                    platform. I can opt in later at any time.
+                  </label>
+                </div>
+              </div>
+              </fieldset>
 
               {error && (
                 <p className="text-sm text-red-600">{error}</p>
               )}
 
-              {/* Submit button — disabled until consent is given */}
               <div>
                 <button
                   type="submit"
-                  disabled={!consented || loading}
+                  disabled={!choice || loading}
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white disabled:text-gray-500 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
                 >
-                  {loading ? 'Saving…' : 'Opt in to SMS notifications'}
+                  {loading ? 'Saving…' : optingOut ? 'Submit — no SMS' : 'Opt in to SMS notifications'}
                 </button>
-                <p className="mt-2 text-xs text-gray-400">
-                  SMS consent is optional. You can use Elev8 Comply without opting in to SMS.
+                <p className="mt-3 text-sm">
+                  <Link href="/login" className="text-blue-600 hover:underline">
+                    Skip — continue to Elev8 Comply without SMS →
+                  </Link>
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  SMS is optional. Saying no, or skipping, never limits your access to our services.
                 </p>
               </div>
             </form>
@@ -217,7 +275,7 @@ export default function SmsOptInPage() {
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">2</div>
               <div>
                 <p className="font-medium text-gray-900">Voluntary opt-in</p>
-                <p className="text-sm text-gray-600 mt-0.5">SMS messaging is entirely optional. You actively opt in by checking the consent box above — it is never pre-selected and is never required to use our service. The opt-in button becomes available only after you voluntarily check the consent box.</p>
+                <p className="text-sm text-gray-600 mt-0.5">SMS messaging is entirely optional. You choose <strong>Yes</strong> or <strong>No thanks</strong> above — neither is pre-selected — or skip the form altogether. Saying no or skipping never affects your access to our services, and a phone number is only needed if you choose Yes.</p>
               </div>
             </div>
             <div className="flex gap-4">

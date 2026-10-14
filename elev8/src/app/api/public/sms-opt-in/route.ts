@@ -8,28 +8,32 @@ import { eq } from 'drizzle-orm';
  * Public endpoint for the standalone /sms opt-in page.
  * No authentication required — this page is the Twilio A2P 10DLC proof URL.
  *
- * Body: { name: string; email: string; phone: string }
+ * Body: { name: string; email: string; phone?: string; choice?: 'opt_in' | 'opt_out' }
  *
- * If the email matches an existing user account, their SMS consent is saved.
+ * SMS is optional: 'opt_out' (no phone needed) records that the person declined.
+ * If the email matches an existing user account, their SMS choice is saved.
  * Either way, returns 200 so the form can show a confirmation screen.
  * The form submission is what Twilio reviewers are verifying — the visual
- * opt-in flow with an unchecked checkbox and required disclosures.
+ * flow: optional, unchecked yes/no boxes, a skip link, and the required disclosures.
  */
 export async function POST(request: Request) {
   let name = '';
   let email = '';
   let phone = '';
+  let optIn = true;
 
   try {
-    const body = await request.json() as { name?: string; email?: string; phone?: string };
+    const body = await request.json() as { name?: string; email?: string; phone?: string; choice?: string };
     name = (body.name ?? '').trim();
     email = (body.email ?? '').trim().toLowerCase();
     phone = (body.phone ?? '').replace(/\D/g, '');
+    optIn = body.choice !== 'opt_out';
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  if (!phone.match(/^\d{10}$/)) {
+  // A phone number is only needed to opt in; declining needs none.
+  if (optIn && !phone.match(/^\d{10}$/)) {
     return NextResponse.json(
       { error: 'Please provide a valid 10-digit US mobile number.' },
       { status: 422 },
@@ -57,17 +61,23 @@ export async function POST(request: Request) {
     if (existingUser) {
       await db
         .update(users)
-        .set({
-          smsConsentGiven: true,
-          smsConsentGivenAt: new Date(),
-          smsPhone: formattedPhone,
-          smsConsentRevokedAt: null,
-          updatedAt: new Date(),
-        })
+        .set(optIn
+          ? {
+              smsConsentGiven: true,
+              smsConsentGivenAt: new Date(),
+              smsPhone: formattedPhone,
+              smsConsentRevokedAt: null,
+              updatedAt: new Date(),
+            }
+          : {
+              smsConsentGiven: false,
+              smsConsentRevokedAt: new Date(),
+              updatedAt: new Date(),
+            })
         .where(eq(users.id, existingUser.id));
     } else {
       // No account yet — log for visibility but don't fail the request.
-      console.log(`[public/sms-opt-in] No account found for ${email} (name: ${name}) — consent noted but not stored.`);
+      console.log(`[public/sms-opt-in] No account found for ${email} (name: ${name}) — SMS choice (${optIn ? 'opt in' : 'opt out'}) noted but not stored.`);
     }
   } catch (err) {
     // Non-fatal — the proof page must always succeed for Twilio reviewers.

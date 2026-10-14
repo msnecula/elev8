@@ -39,6 +39,14 @@ export async function sendEmail({
       await db.update(notifications)
         .set({ status: 'failed', error: result.error.message })
         .where(eq(notifications.id, notification.id));
+      // Resend rejections (unverified sender domain, bad address, rate limits) come back
+      // here rather than throwing — log them so they show up in the Vercel logs too.
+      console.error('[Email] Resend rejected message:', {
+        from: EMAIL_FROM,
+        subject,
+        error: result.error.message,
+        name: result.error.name,
+      });
       return { success: false, error: result.error.message };
     }
 

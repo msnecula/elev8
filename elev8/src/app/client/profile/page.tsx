@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import SMSConsentPanel from '@/components/account/SMSConsentPanel';
 import ProfileForm from '@/components/account/ProfileForm';
 import PasswordForm from '@/components/account/PasswordForm';
+import ChangeEmailForm from '@/components/account/ChangeEmailForm';
 
 export const metadata: Metadata = { title: 'My Profile' };
 
@@ -54,11 +55,17 @@ export default async function ClientProfilePage() {
       {/* Account info */}
       <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
         <h2 className="text-base font-semibold text-slate-800">Account Information</h2>
-        <ProfileForm
-          fullName={baseRow?.fullName || user.fullName}
-          email={baseRow?.email ?? user.email}
-          phone={baseRow?.phone ?? null}
-        />
+        <ProfileForm fullName={baseRow?.fullName || user.fullName} phone={baseRow?.phone ?? null} />
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-slate-800">Sign-in Email</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            We&apos;ll email a confirmation link to the new address. Your email changes once you click it.
+          </p>
+        </div>
+        <ChangeEmailForm currentEmail={baseRow?.email ?? user.email} />
       </section>
 
       <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">

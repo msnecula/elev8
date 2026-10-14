@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ROLE_LABELS } from '@/lib/constants';
 import ProfileForm from '@/components/account/ProfileForm';
 import PasswordForm from '@/components/account/PasswordForm';
+import ChangeEmailForm from '@/components/account/ChangeEmailForm';
 import LicensesForm from '@/components/account/LicensesForm';
 import SMSConsentPanel from '@/components/account/SMSConsentPanel';
 
@@ -44,11 +45,19 @@ export default async function AccountPage() {
           <CardTitle className="text-base">Profile</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProfileForm
-            fullName={row?.fullName ?? user.fullName}
-            email={row?.email ?? user.email}
-            phone={row?.phone ?? null}
-          />
+          <ProfileForm fullName={row?.fullName ?? user.fullName} phone={row?.phone ?? null} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Sign-in Email</CardTitle>
+          <CardDescription>
+            We&apos;ll email a confirmation link to the new address. Your email changes once you click it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChangeEmailForm currentEmail={row?.email ?? user.email} />
         </CardContent>
       </Card>
 

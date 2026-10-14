@@ -310,6 +310,40 @@ export async function sendInviteEmail({
   });
 }
 
+// ─── Self-service email change ────────────────────────────────────────────────
+
+export async function sendEmailChangeEmails({
+  userId, name, fromEmail, toEmail, confirmUrl,
+}: {
+  userId: string;
+  name: string;
+  fromEmail: string;
+  toEmail: string;
+  confirmUrl: string;
+}) {
+  const { ConfirmEmailChangeEmail, EmailChangeRequestedNotice } = await import('@/emails/EmailChangeEmail');
+  const props = { name, fromEmail, toEmail };
+
+  const confirm = await sendEmail({
+    to: toEmail,
+    subject: `Confirm your new ${APP_NAME} email address`,
+    html: await render(ConfirmEmailChangeEmail({ ...props, confirmUrl })),
+    // The link changes the account's sign-in email, so the log keeps a copy without it.
+    logBody: await render(ConfirmEmailChangeEmail({ ...props, confirmUrl: '#confirm-link-not-stored' })),
+    userId,
+  });
+  if (!confirm.success) return confirm;
+
+  // Best effort: the heads-up to the old address shouldn't block the change.
+  await sendEmail({
+    to: fromEmail,
+    subject: `Your ${APP_NAME} sign-in email change was requested`,
+    html: await render(EmailChangeRequestedNotice(props)),
+    userId,
+  });
+  return confirm;
+}
+
 // ─── Proposal draft ready — notify reviewer ───────────────────────────────────
 
 export async function sendProposalDraftReadyEmail({

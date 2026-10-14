@@ -1,20 +1,25 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/server/db/client';
 import { users, technicians } from '@/drizzle/schema';
 import {
   ownProfileSchema,
   ownLicensesSchema,
+  emailChangeSchema,
   type OwnProfileInput,
   type OwnLicensesInput,
+  type EmailChangeInput,
 } from '@/lib/validation/users';
-import { updateAuthUser, upsertTechnicianProfile } from '@/server/services/userAccounts';
+import { createEmailChangeToken } from '@/lib/emailChangeToken';
+import { APP_URL } from '@/lib/constants';
+import { emailChangeSecret, updateAuthUser, upsertTechnicianProfile } from '@/server/services/userAccounts';
+import { sendEmailChangeEmails } from '@/server/services/notificationService';
 import type { ActionResult } from '@/types/api';
 
-// Email and role are admin-only; users change their name and phone here.
+// Name and phone. Role stays admin-only; email changes go through requestEmailChange.
 export async function updateMyProfile(input: OwnProfileInput): Promise<ActionResult<null>> {
   const user = await requireUser();
 
@@ -39,6 +44,46 @@ export async function updateMyProfile(input: OwnProfileInput): Promise<ActionRes
   }
 
   revalidatePath('/', 'layout');
+  return { success: true, data: null };
+}
+
+// Emails a confirmation link to the new address; nothing changes until it's clicked.
+export async function requestEmailChange(input: EmailChangeInput): Promise<ActionResult<null>> {
+  const user = await requireUser();
+
+  const parsed = emailChangeSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid email' };
+  const toEmail = parsed.data.newEmail;
+
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, user.id),
+    columns: { email: true, fullName: true },
+  });
+  if (!row) return { success: false, error: 'Your user profile is missing — ask an admin to fix it' };
+  if (toEmail === row.email.toLowerCase()) return { success: false, error: 'That is already your email' };
+
+  const taken = await db.query.users.findFirst({
+    where: and(eq(users.email, toEmail), ne(users.id, user.id)),
+    columns: { id: true },
+  });
+  if (taken) return { success: false, error: 'Another account already uses that email' };
+
+  const token = createEmailChangeToken(
+    { userId: user.id, fromEmail: row.email, toEmail },
+    emailChangeSecret(),
+  );
+  const confirmUrl = new URL('/confirm-email', APP_URL);
+  confirmUrl.searchParams.set('token', token);
+
+  const sent = await sendEmailChangeEmails({
+    userId: user.id,
+    name: row.fullName,
+    fromEmail: row.email,
+    toEmail,
+    confirmUrl: confirmUrl.toString(),
+  });
+  if (!sent.success) return { success: false, error: 'The confirmation email could not be sent. Please try again.' };
+
   return { success: true, data: null };
 }
 

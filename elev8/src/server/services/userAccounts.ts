@@ -1,6 +1,7 @@
 import 'server-only';
+import { createHmac } from 'crypto';
 import { db } from '@/server/db/client';
-import { technicians } from '@/drizzle/schema';
+import { technicians, users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { createServiceClient } from '@/lib/supabase/server';
 import { APP_URL } from '@/lib/constants';
@@ -87,6 +88,29 @@ export async function upsertTechnicianProfile(
     .insert(technicians)
     .values({ userId, ...values })
     .onConflictDoUpdate({ target: technicians.userId, set: values });
+}
+
+/**
+ * Key for signing self-service email-change links. Derived from the service-role
+ * key (already a server-only secret) so no extra env var is needed; rotating that
+ * key simply invalidates outstanding links.
+ */
+export function emailChangeSecret(): string {
+  const base = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  return createHmac('sha256', base).update('elev8:email-change:v1').digest('hex');
+}
+
+/**
+ * Switches a user's sign-in email everywhere it is stored. Rows first, then
+ * Supabase Auth last inside the transaction, so a failed auth update rolls back.
+ */
+export async function applyEmailChange(userId: string, newEmail: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ email: newEmail, updatedAt: new Date() }).where(eq(users.id, userId));
+    await tx.update(technicians).set({ email: newEmail, updatedAt: new Date() }).where(eq(technicians.userId, userId));
+    await updateAuthUser(userId, { email: newEmail });
+  });
 }
 
 export async function deactivateTechnicianProfile(

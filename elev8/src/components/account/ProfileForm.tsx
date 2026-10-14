@@ -20,11 +20,10 @@ type Values = z.infer<typeof schema>;
 
 interface ProfileFormProps {
   fullName: string;
-  email: string;
   phone: string | null;
 }
 
-export default function ProfileForm({ fullName, email, phone }: ProfileFormProps) {
+export default function ProfileForm({ fullName, phone }: ProfileFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<Values>({
@@ -54,13 +53,6 @@ export default function ProfileForm({ fullName, email, phone }: ProfileFormProps
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" type="tel" {...register('phone')} placeholder="310-555-0100" />
         </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" value={email} disabled readOnly />
-        <p className="text-xs text-muted-foreground">
-          Your email is also your sign-in. Ask an administrator if it needs to change.
-        </p>
       </div>
       <Button type="submit" disabled={isPending || !isDirty}>
         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

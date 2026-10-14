@@ -35,6 +35,11 @@ export const ownLicensesSchema = z.object({
   qeiNumber: optionalText(50),
 });
 
+export const emailChangeSchema = z.object({
+  newEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
+});
+
+export type EmailChangeInput = z.input<typeof emailChangeSchema>;
 export type OwnProfileInput = z.input<typeof ownProfileSchema>;
 export type OwnLicensesInput = z.input<typeof ownLicensesSchema>;
 

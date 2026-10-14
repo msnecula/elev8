@@ -1,21 +1,33 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
-import { EMAIL_LINK_TYPES, safeNextPath, type EmailLinkType } from '@/lib/validation/users';
+import { EMAIL_LINK_TYPES, type EmailLinkType } from '@/lib/validation/users';
 
-// Landing point for invite and "set your password" emails. The link carries a
-// one-time token hash; verifying it here sets the session cookie, then the user
-// is sent on to choose a password.
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const tokenHash = searchParams.get('token_hash');
-  const type = searchParams.get('type') as EmailLinkType | null;
-  const next = safeNextPath(searchParams.get('next'), '/reset-password');
+// Submitted by the "Continue" button on /invite. Verifying the one-time token
+// hash sets the session cookie; the user is then sent to choose a password.
+// 303 so the browser follows with a GET.
+export async function POST(request: Request) {
+  const { origin } = new URL(request.url);
+  const form = await request.formData();
+  const tokenHash = form.get('token_hash');
+  const type = form.get('type');
 
-  if (tokenHash && type && EMAIL_LINK_TYPES.includes(type)) {
+  if (typeof tokenHash === 'string' && tokenHash && EMAIL_LINK_TYPES.includes(type as EmailLinkType)) {
     const supabase = await createServerClient();
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    const { error } = await supabase.auth.verifyOtp({ type: type as EmailLinkType, token_hash: tokenHash });
+    if (!error) return NextResponse.redirect(`${origin}/reset-password`, 303);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=invite_link_invalid`);
+  return NextResponse.redirect(`${origin}/login?error=invite_link_invalid`, 303);
+}
+
+// A GET never spends the token (mail scanners prefetch links); send it to the
+// confirmation page instead.
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const invite = new URL('/invite', url.origin);
+  for (const key of ['token_hash', 'type']) {
+    const value = url.searchParams.get(key);
+    if (value) invite.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(invite);
 }

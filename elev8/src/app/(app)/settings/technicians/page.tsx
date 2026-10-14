@@ -53,7 +53,7 @@ export default async function TechnicianLicensesPage() {
       >
         {currentUser.role === 'admin' && (
           <Button asChild size="sm">
-            <Link href="/settings/users/new?role=technician">
+            <Link href="/settings/users/new?role=technician&from=technicians">
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />
               Add Technician
             </Link>

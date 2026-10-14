@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,6 +43,11 @@ export default function LoginForm({
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   });
+
+  // A deactivated user may still hold a session cookie; clear it.
+  useEffect(() => {
+    if (errorParam === 'account_deactivated') void createClient().auth.signOut();
+  }, [errorParam]);
 
   async function onSubmit(data: LoginInput) {
     setServerError(null);

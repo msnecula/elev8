@@ -6,10 +6,15 @@ import { users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import type { UserRole, SessionUser } from '@/types/auth';
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
+type SessionState =
+  | { status: 'signed-in'; user: SessionUser }
+  | { status: 'signed-out' }
+  | { status: 'deactivated' };
+
+async function loadSession(): Promise<SessionState> {
   const supabase = await createServerClient();
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
+  if (error || !user) return { status: 'signed-out' };
 
   // Read role + accountId from the users table — single source of truth
   // (user_metadata in JWTs can be stale or missing for admin accounts)
@@ -18,26 +23,36 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     columns: { role: true, accountId: true, fullName: true, isActive: true },
   });
 
-  // Deactivated by an admin: treat an existing session as signed out. (New sign-ins
-  // are already blocked by the Supabase ban set in setUserActive.)
-  if (dbUser && !dbUser.isActive) return null;
+  // Deactivated by an admin: an existing session no longer counts. (New sign-ins
+  // and token refreshes are already blocked by the Supabase ban set in setUserActive.)
+  if (dbUser && !dbUser.isActive) return { status: 'deactivated' };
 
   // If the user row is missing from the DB (e.g. seed didn't run or UUID mismatch),
   // fall back to JWT metadata so the session isn't bricked.
   // Run scripts/fix-demo-user.mjs to repair the DB state.
   return {
-    id: user.id,
-    email: user.email!,
-    role: ((dbUser?.role ?? user.user_metadata?.role) as UserRole) ?? 'client',
-    fullName: dbUser?.fullName || (user.user_metadata?.full_name ?? ''),
-    accountId: dbUser?.accountId ?? (user.user_metadata?.account_id as string | null) ?? null,
+    status: 'signed-in',
+    user: {
+      id: user.id,
+      email: user.email!,
+      role: ((dbUser?.role ?? user.user_metadata?.role) as UserRole) ?? 'client',
+      fullName: dbUser?.fullName || (user.user_metadata?.full_name ?? ''),
+      accountId: dbUser?.accountId ?? (user.user_metadata?.account_id as string | null) ?? null,
+    },
   };
 }
 
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  const session = await loadSession();
+  return session.status === 'signed-in' ? session.user : null;
+}
+
 export async function requireUser(): Promise<SessionUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect('/login');
-  return user;
+  const session = await loadSession();
+  // The login page signs the leftover session out when it sees this error.
+  if (session.status === 'deactivated') redirect('/login?error=account_deactivated');
+  if (session.status === 'signed-out') redirect('/login');
+  return session.user;
 }
 
 export async function requireRole(...roles: UserRole[]): Promise<SessionUser> {

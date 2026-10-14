@@ -16,11 +16,14 @@ export const metadata: Metadata = { title: 'Add User' };
 export default async function NewUserPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; from?: string }>;
 }) {
   await requireRole('admin');
-  const { role } = await searchParams;
+  const { role, from } = await searchParams;
   const defaultRole = USER_ROLES.includes(role as UserRole) ? (role as UserRole) : undefined;
+  const back = from === 'technicians'
+    ? { href: '/settings/technicians', label: 'Back to Technician Licenses' }
+    : { href: '/settings', label: 'Back to Settings' };
 
   const allAccounts = await db
     .select({ id: accounts.id, name: accounts.name })
@@ -30,9 +33,9 @@ export default async function NewUserPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/settings" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link href={back.href} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
-        Back to Settings
+        {back.label}
       </Link>
       <PageHeader
         title="Add User"
@@ -40,7 +43,11 @@ export default async function NewUserPage({
       />
       <Card>
         <CardContent className="pt-6">
-          <UserForm accounts={allAccounts} defaultRole={defaultRole} />
+          <UserForm
+            accounts={allAccounts}
+            defaultRole={defaultRole}
+            returnTo={from === 'technicians' ? '/settings/technicians' : undefined}
+          />
         </CardContent>
       </Card>
     </div>

@@ -11,11 +11,13 @@ import type { UserRole } from '@/types/auth';
 // ─── Core send helpers ────────────────────────────────────────────────────────
 
 export async function sendEmail({
-  to, subject, html, jobId, userId,
+  to, subject, html, logBody, jobId, userId,
 }: {
   to: string;
   subject: string;
   html: string;
+  /** Stored in the notifications log instead of `html` — for emails carrying sign-in links. */
+  logBody?: string;
   jobId?: string;
   userId?: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -25,7 +27,7 @@ export async function sendEmail({
     type: 'email',
     channel: to,
     subject,
-    body: html,
+    body: logBody ?? html,
     status: 'pending',
   }).returning({ id: notifications.id });
 
@@ -291,7 +293,10 @@ export async function sendInviteEmail({
   userId?: string;
 }) {
   const { InviteEmail } = await import('@/emails/InviteEmail');
-  const html = await render(InviteEmail({ inviteeName, role, accountName, inviteUrl, isReminder }));
+  const props = { inviteeName, role, accountName, isReminder };
+  const html = await render(InviteEmail({ ...props, inviteUrl }));
+  // The link signs whoever opens it in, so the log keeps a copy without it.
+  const logBody = await render(InviteEmail({ ...props, inviteUrl: '#sign-in-link-not-stored' }));
   const where = role === 'client' && accountName ? ` — ${accountName}` : '';
 
   return sendEmail({
@@ -300,6 +305,7 @@ export async function sendInviteEmail({
       ? `Set your ${APP_NAME} password`
       : `You're invited to ${APP_NAME}${where}`,
     html,
+    logBody,
     userId,
   });
 }

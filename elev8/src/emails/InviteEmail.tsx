@@ -48,8 +48,8 @@ export function InviteEmail({
       )}
 
       <EmailText>
-        Click the button below to set your password and sign in. This link can only be used once
-        and expires after 24 hours.
+        Click the button below to set your password and sign in. The link can only be used once —
+        if it has expired, ask your administrator to send a new one.
       </EmailText>
 
       <EmailButton href={inviteUrl}>

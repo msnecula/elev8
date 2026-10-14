@@ -10,8 +10,11 @@ import type { UserRole } from '@/types/auth';
 // Long enough to be permanent; Supabase has no "ban forever" value.
 const DEACTIVATED_BAN_DURATION = '876000h';
 
+/** The shared client or a transaction, so callers can group writes. */
+export type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
- * Creates a one-time sign-in link that lands on /reset-password, where the person
+ * Creates a one-time sign-in link that ends on /reset-password, where the person
  * sets their password. 'invite' also creates the Supabase Auth user (without
  * Supabase sending its own email); 'recovery' is for users who already exist.
  * We email the link ourselves so it goes through Resend with our template.
@@ -30,10 +33,10 @@ export async function createPasswordSetupLink(
     throw new Error(error?.message ?? 'Could not create a sign-in link');
   }
 
-  const url = new URL('/api/auth/confirm', APP_URL);
+  // Lands on /invite, whose Continue button spends the token (see that page for why).
+  const url = new URL('/invite', APP_URL);
   url.searchParams.set('token_hash', data.properties.hashed_token);
   url.searchParams.set('type', type);
-  url.searchParams.set('next', '/reset-password');
   return { url: url.toString(), authUserId: data.user.id };
 }
 
@@ -57,6 +60,12 @@ export async function updateAuthUser(
   if (error) throw new Error(error.message);
 }
 
+/** Undo a just-created Supabase Auth user when the rest of "Add User" fails. */
+export async function deleteAuthUser(userId: string): Promise<void> {
+  const { error } = await createServiceClient().auth.admin.deleteUser(userId);
+  if (error) console.error('[users] Could not roll back auth user', userId, error.message);
+}
+
 /**
  * Creates or updates the technicians row for a user. Work orders reference this
  * row, so it is never deleted — only marked inactive.
@@ -71,16 +80,20 @@ export async function upsertTechnicianProfile(
     cccmLicense?: string | null;
     qeiNumber?: string | null;
   },
+  executor: DbExecutor = db,
 ): Promise<void> {
   const values = { ...profile, updatedAt: new Date() };
-  await db
+  await executor
     .insert(technicians)
     .values({ userId, ...values })
     .onConflictDoUpdate({ target: technicians.userId, set: values });
 }
 
-export async function deactivateTechnicianProfile(userId: string): Promise<void> {
-  await db
+export async function deactivateTechnicianProfile(
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<void> {
+  await executor
     .update(technicians)
     .set({ isActive: false, updatedAt: new Date() })
     .where(eq(technicians.userId, userId));

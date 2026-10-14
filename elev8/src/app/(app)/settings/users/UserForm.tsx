@@ -50,9 +50,11 @@ interface UserFormProps {
   user?: { id: string } & Partial<FormValues>;
   defaultRole?: UserRole;
   isSelf?: boolean;
+  /** Where to go after adding a user; defaults to the new user's edit page. */
+  returnTo?: string;
 }
 
-export default function UserForm({ accounts, user, defaultRole = 'dispatcher', isSelf = false }: UserFormProps) {
+export default function UserForm({ accounts, user, defaultRole = 'dispatcher', isSelf = false, returnTo }: UserFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isEdit = !!user;
@@ -93,7 +95,7 @@ export default function UserForm({ accounts, user, defaultRole = 'dispatcher', i
           description: 'Open the user and click "Resend invite" to try again.',
         });
       }
-      router.push(`/settings/users/${result.data.userId}`);
+      router.push(returnTo ?? `/settings/users/${result.data.userId}`);
     });
   }
 

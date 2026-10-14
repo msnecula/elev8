@@ -51,9 +51,3 @@ export const passwordSchema = z
 // Only these one-time link types are accepted by /api/auth/confirm.
 export const EMAIL_LINK_TYPES = ['invite', 'recovery'] as const;
 export type EmailLinkType = (typeof EMAIL_LINK_TYPES)[number];
-
-// Same-origin relative paths only, so a crafted link can't bounce users off-site.
-export function safeNextPath(next: string | null | undefined, fallback = '/dashboard'): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) return fallback;
-  return next;
-}

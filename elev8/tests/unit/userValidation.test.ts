@@ -3,7 +3,6 @@ import {
   adminUserSchema,
   ownProfileSchema,
   passwordSchema,
-  safeNextPath,
 } from '@/lib/validation/users';
 
 const base = { fullName: 'David Kim', email: 'David.Kim@Example.com', role: 'technician' as const };
@@ -52,17 +51,5 @@ describe('passwordSchema', () => {
     expect(passwordSchema.safeParse({ password: 'short', confirmPassword: 'short' }).success).toBe(false);
     expect(passwordSchema.safeParse({ password: 'long-enough', confirmPassword: 'different' }).success).toBe(false);
     expect(passwordSchema.safeParse({ password: 'long-enough', confirmPassword: 'long-enough' }).success).toBe(true);
-  });
-});
-
-describe('safeNextPath', () => {
-  it('allows same-site relative paths', () => {
-    expect(safeNextPath('/reset-password')).toBe('/reset-password');
-  });
-
-  it('falls back for off-site or malformed targets', () => {
-    for (const bad of ['https://evil.example', '//evil.example', '/\\evil.example', 'reset-password', '', null, undefined]) {
-      expect(safeNextPath(bad, '/fallback')).toBe('/fallback');
-    }
   });
 });

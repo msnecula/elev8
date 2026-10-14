@@ -8,6 +8,7 @@ import { users, accounts, technicians } from '@/drizzle/schema';
 import { adminUserSchema, type AdminUserInput } from '@/lib/validation/users';
 import {
   createPasswordSetupLink,
+  deleteAuthUser,
   updateAuthUser,
   upsertTechnicianProfile,
   deactivateTechnicianProfile,
@@ -81,33 +82,48 @@ export async function createUser(
     phone: v.phone ?? null,
     isActive: true,
   };
-  await db
-    .insert(users)
-    .values({ id: userId, ...profile })
-    .onConflictDoUpdate({ target: users.id, set: { ...profile, updatedAt: new Date() } });
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(users)
+        .values({ id: userId, ...profile })
+        .onConflictDoUpdate({ target: users.id, set: { ...profile, updatedAt: new Date() } });
 
-  if (v.role === 'technician') {
-    await upsertTechnicianProfile(userId, {
-      fullName: v.fullName,
-      email: v.email,
-      phone: v.phone ?? null,
-      isActive: true,
-      cccmLicense: v.cccmLicense ?? null,
-      qeiNumber: v.qeiNumber ?? null,
+      if (v.role === 'technician') {
+        await upsertTechnicianProfile(userId, {
+          fullName: v.fullName,
+          email: v.email,
+          phone: v.phone ?? null,
+          isActive: true,
+          cccmLicense: v.cccmLicense ?? null,
+          qeiNumber: v.qeiNumber ?? null,
+        }, tx);
+      }
     });
+  } catch (err) {
+    // Remove the login too, so the admin can simply try again with the same email.
+    await deleteAuthUser(userId);
+    console.error('[users] createUser failed', err);
+    return { success: false, error: 'Could not save the new user. Nothing was created — please try again.' };
   }
 
-  const sent = await sendInviteEmail({
-    to: v.email,
-    inviteeName: v.fullName,
-    role: v.role,
-    accountName: company,
-    inviteUrl: link.url,
-    userId,
-  });
+  // The user exists from here on; a failed email is recoverable with "Resend invite".
+  let inviteSent = false;
+  try {
+    inviteSent = (await sendInviteEmail({
+      to: v.email,
+      inviteeName: v.fullName,
+      role: v.role,
+      accountName: company,
+      inviteUrl: link.url,
+      userId,
+    })).success;
+  } catch (err) {
+    console.error('[users] invite email failed', err);
+  }
 
   revalidateUserPages();
-  return { success: true, data: { userId, inviteSent: sent.success } };
+  return { success: true, data: { userId, inviteSent } };
 }
 
 // ── Edit any user's profile, email, role and licenses ─────────────────────────
@@ -146,38 +162,46 @@ export async function updateUser(
     if (taken) return { success: false, error: 'Another user already has this email' };
   }
 
+  // Database writes first, then the Supabase Auth update as the last step inside the
+  // transaction: if the auth call fails, every row change rolls back with it.
   try {
-    await updateAuthUser(userId, {
-      email: emailChanged ? v.email : undefined,
-      metadata: { full_name: v.fullName, role: v.role, account_id: accountId },
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          email: v.email,
+          fullName: v.fullName,
+          role: v.role,
+          accountId,
+          phone: v.phone ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      if (v.role === 'technician') {
+        await upsertTechnicianProfile(userId, {
+          fullName: v.fullName,
+          email: v.email,
+          phone: v.phone ?? null,
+          isActive: existing.isActive,
+          cccmLicense: v.cccmLicense ?? null,
+          qeiNumber: v.qeiNumber ?? null,
+        }, tx);
+      } else if (existing.role === 'technician') {
+        await deactivateTechnicianProfile(userId, tx);
+      }
+
+      await updateAuthUser(userId, {
+        email: emailChanged ? v.email : undefined,
+        metadata: { full_name: v.fullName, role: v.role, account_id: accountId },
+      });
     });
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Could not update login details' };
-  }
-
-  await db
-    .update(users)
-    .set({
-      email: v.email,
-      fullName: v.fullName,
-      role: v.role,
-      accountId,
-      phone: v.phone ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId));
-
-  if (v.role === 'technician') {
-    await upsertTechnicianProfile(userId, {
-      fullName: v.fullName,
-      email: v.email,
-      phone: v.phone ?? null,
-      isActive: existing.isActive,
-      cccmLicense: v.cccmLicense ?? null,
-      qeiNumber: v.qeiNumber ?? null,
-    });
-  } else if (existing.role === 'technician') {
-    await deactivateTechnicianProfile(userId);
+    console.error('[users] updateUser failed', err);
+    return {
+      success: false,
+      error: `Nothing was changed: ${err instanceof Error ? err.message : 'the update failed'}`,
+    };
   }
 
   revalidateUserPages(userId);

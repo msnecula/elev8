@@ -135,12 +135,12 @@ export default function DocumentVaultSection({ docs }: { docs: VaultDoc[] }) {
                 {formatBytes(doc.fileSizeBytes) || '—'}
               </td>
               <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                {new Date(doc.createdAt).toLocaleDateString('en-US', {
+                {new Date(doc.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles',
                   month: 'short', day: 'numeric', year: 'numeric',
                 })}
                 {' '}
                 <span className="opacity-60">
-                  {new Date(doc.createdAt).toLocaleTimeString('en-US', {
+                  {new Date(doc.createdAt).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles',
                     hour: 'numeric', minute: '2-digit',
                   })}
                 </span>

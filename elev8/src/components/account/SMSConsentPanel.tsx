@@ -13,7 +13,7 @@ interface SMSConsentPanelProps {
 
 function fmt(iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles',
     month: 'long', day: 'numeric', year: 'numeric',
   });
 }

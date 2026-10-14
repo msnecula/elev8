@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/lib/toast';
 import { requestScheduling } from '@/server/actions/scheduling';
 import { Loader2, Calendar } from 'lucide-react';
+import { todayPacific } from '@/lib/utils';
 
 const schema = z.object({
   preferredDate1: z.string().min(1, 'Please provide at least one preferred date'),
@@ -22,12 +23,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-// Minimum date = tomorrow
-function getTomorrow() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
-}
 
 export default function SchedulingRequestForm({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -51,7 +46,8 @@ export default function SchedulingRequestForm({ jobId }: { jobId: string }) {
     });
   }
 
-  const tomorrow = getTomorrow();
+  // Earliest pickable date = tomorrow in California
+  const tomorrow = todayPacific(1);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-md">

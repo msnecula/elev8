@@ -1,22 +1,61 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { format, formatDistanceToNow, isAfter, addHours } from 'date-fns';
+import { format, formatDistanceToNow, isAfter, addHours, addDays } from 'date-fns';
+import { tz, TZDate } from '@date-fns/tz';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Format a date/string with a date-fns format string */
+/** Every date and time in the app is shown, and typed, in California time. */
+export const APP_TIME_ZONE = 'America/Los_Angeles';
+const pacific = tz(APP_TIME_ZONE);
+
+// A bare calendar date ('2026-10-20', e.g. a notice deadline) has no time of day or
+// zone; read as an instant it is UTC midnight, which is the previous day in California.
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Format a date/string with a date-fns format string, in Pacific time — the same on
+ * the server (which runs in UTC) and in every browser. Calendar dates print as written.
+ */
 export function formatDate(
   date: Date | string | null | undefined,
   fmt = 'MMM d, yyyy'
 ): string {
   if (!date) return '—';
   try {
-    return format(new Date(date), fmt);
+    if (typeof date === 'string' && DATE_ONLY.test(date)) {
+      const [y, m, d] = date.split('-').map(Number);
+      return format(new Date(y, m - 1, d), fmt);
+    }
+    return format(new Date(date), fmt, { in: pacific });
   } catch {
     return String(date);
   }
+}
+
+/** Today's date in California as 'yyyy-MM-dd' (the server's own "today" is UTC). */
+export function todayPacific(offsetDays = 0): string {
+  return format(addDays(new Date(), offsetDays), 'yyyy-MM-dd', { in: pacific });
+}
+
+/**
+ * Reads a date-time typed into a datetime-local input ('2026-10-20T08:00') as
+ * California time. A value that already carries a zone ('Z' or '+hh:mm') is kept.
+ */
+export function parsePacificDateTime(value: string): Date {
+  if (/(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(value)) return new Date(value);
+  const [datePart, timePart = '00:00'] = value.split('T');
+  const [y, mo, d] = datePart.split('-').map(Number);
+  const [h, mi, s = 0] = timePart.split(':').map(Number);
+  return new Date(new TZDate(y, mo - 1, d, h, mi, s, APP_TIME_ZONE).getTime());
+}
+
+/** A stored instant as 'yyyy-MM-ddTHH:mm' California time, for a datetime-local input. */
+export function toPacificDateTimeInput(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  return format(new Date(date), "yyyy-MM-dd'T'HH:mm", { in: pacific });
 }
 
 /**

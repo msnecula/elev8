@@ -27,10 +27,10 @@ export default function AdvanceNoticeForm({
   const [pdfReady, setPdfReady] = useState<{ base64: string; filename: string } | null>(null);
 
   const defaultDate = scheduledStart
-    ? new Date(scheduledStart).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(scheduledStart).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     : '';
   const defaultTime = scheduledStart
-    ? new Date(scheduledStart).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    ? new Date(scheduledStart).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' })
     : '';
 
   const { register, handleSubmit } = useForm({

@@ -290,10 +290,10 @@ export async function generateFilledForm(input: {
             mechanicLicense: tech?.cccmLicense ?? undefined,
             qeiNumber: tech?.qeiNumber ?? undefined,
             testDate: wo.scheduledStart
-              ? new Date(wo.scheduledStart).toLocaleDateString('en-US')
+              ? new Date(wo.scheduledStart).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })
               : '',
             testTime: wo.scheduledStart
-              ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+              ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' })
               : '',
           };
         }
@@ -318,10 +318,10 @@ export async function generateFilledForm(input: {
         mechanicLicense: tech?.cccmLicense ?? undefined,
         qeiNumber: tech?.qeiNumber ?? undefined,
         testDate: wo.scheduledStart
-          ? new Date(wo.scheduledStart).toLocaleDateString('en-US')
+          ? new Date(wo.scheduledStart).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })
           : '',
         testTime: wo.scheduledStart
-          ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' })
           : '',
       };
     }

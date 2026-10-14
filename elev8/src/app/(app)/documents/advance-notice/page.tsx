@@ -106,7 +106,7 @@ export default async function AdvanceNoticePage({
             <div>
               <p className="text-xs text-muted-foreground">Scheduled Work Date</p>
               <p className="font-medium text-green-700">
-                {new Date(workOrder.scheduledStart).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {new Date(workOrder.scheduledStart).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
           )}

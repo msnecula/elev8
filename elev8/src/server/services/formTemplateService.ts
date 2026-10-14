@@ -260,7 +260,7 @@ export function buildFieldMappings(
   jobData?: Record<string, unknown>,
   formType?: FormTemplateType,
 ): Record<string, string> {
-  const today = new Date().toLocaleDateString('en-US', {
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles',
     month: '2-digit', day: '2-digit', year: 'numeric',
   });
 
@@ -683,7 +683,7 @@ export async function drawDosh100Overlay(
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
 
   // ── Parse source data (mirrors buildFieldMappings dosh100 logic) ───────────
-  const today = new Date().toLocaleDateString('en-US', {
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles',
     month: '2-digit', day: '2-digit', year: 'numeric',
   });
 

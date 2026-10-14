@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { logJobActivity } from '@/server/services/activityLogger';
 import { sendEmail, buildSimpleEmail, sendSchedulingConfirmEmail } from '@/server/services/notificationService';
 import { revalidatePath } from 'next/cache';
-import { formatDate } from '@/lib/utils';
+import { formatDate, parsePacificDateTime } from '@/lib/utils';
 import { APP_URL } from '@/lib/constants';
 import { addHours } from 'date-fns';
 import type { ActionResult } from '@/types/api';
@@ -156,8 +156,9 @@ export async function confirmScheduling(
     return { success: false, error: 'This request has already been confirmed or cancelled' };
   }
 
-  const confirmedStart = new Date(parsed.data.confirmedStartDate);
-  const confirmedEnd = new Date(parsed.data.confirmedEndDate);
+  // Typed into datetime-local inputs as California time
+  const confirmedStart = parsePacificDateTime(parsed.data.confirmedStartDate);
+  const confirmedEnd = parsePacificDateTime(parsed.data.confirmedEndDate);
   const now = new Date();
 
   await db.update(schedulingRequests)

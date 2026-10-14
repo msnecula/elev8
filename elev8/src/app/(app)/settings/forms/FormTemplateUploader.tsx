@@ -304,7 +304,7 @@ export default function FormTemplateUploader() {
                     <p><span className="font-medium">Filed when:</span> {filedWhen}</p>
                     {isUploaded && updatedAt && (
                       <p className="text-green-700">
-                        Last updated: {new Date(updatedAt).toLocaleDateString('en-US', {
+                        Last updated: {new Date(updatedAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles',
                           month: 'long', day: 'numeric', year: 'numeric',
                         })}
                       </p>

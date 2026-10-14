@@ -179,7 +179,7 @@ export async function generateEU632(input: {
 
   const parsed = notice.parsedData as unknown as ParsedNoticeData | null;
 
-  const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: '2-digit', day: '2-digit', year: 'numeric' });
 
   const eu632Data: EU632Data = {
     propertyAddress: parsed?.propertyAddress ?? '',
@@ -296,7 +296,7 @@ export async function generate48HourNotice(input: {
     resolvedNoticeId = input.noticeId ?? null;
   }
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const noticeData: AdvanceNoticeData = {
     date: today,
@@ -310,10 +310,10 @@ export async function generate48HourNotice(input: {
     stateId: parsed?.equipmentId ?? packet?.stateId ?? '',
     elevatorDescription: `${parsed?.elevatorType ?? 'Elevator'} — ${parsed?.equipmentId ?? ''}`.trim(),
     scheduledWorkDate: wo?.scheduledStart
-      ? new Date(wo.scheduledStart).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      ? new Date(wo.scheduledStart).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       : '',
     scheduledWorkTime: wo?.scheduledStart
-      ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      ? new Date(wo.scheduledStart).toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' })
       : '',
     natureOfWork: parsed?.requiredWorkSummary ?? job?.title ?? '',
     cqccName: COMPANY_INFO.name,

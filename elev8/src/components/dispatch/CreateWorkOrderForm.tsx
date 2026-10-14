@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/lib/toast';
 import { createWorkOrder } from '@/server/actions/dispatch';
 import { REGIONS, SKILL_TAGS } from '@/lib/constants';
+import { toPacificDateTimeInput } from '@/lib/utils';
 import { Loader2, ClipboardList } from 'lucide-react';
 
 const schema = z.object({
@@ -40,12 +41,6 @@ interface CreateWorkOrderFormProps {
   onCreated?: (workOrderId: string) => void;
 }
 
-function toDatetimeLocal(d: Date | string | null | undefined) {
-  if (!d) return '';
-  const dt = new Date(d);
-  const offset = dt.getTimezoneOffset() * 60000;
-  return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
-}
 
 export default function CreateWorkOrderForm({
   jobId, schedulingRequestId, defaultSkillTag,
@@ -57,8 +52,8 @@ export default function CreateWorkOrderForm({
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      scheduledStart: confirmedStart ? toDatetimeLocal(confirmedStart) : '',
-      scheduledEnd: confirmedEnd ? toDatetimeLocal(confirmedEnd) : '',
+      scheduledStart: toPacificDateTimeInput(confirmedStart),
+      scheduledEnd: toPacificDateTimeInput(confirmedEnd),
       region: '',
       requiredSkillTag: defaultSkillTag ?? '',
       fortyEightHourNoticeRequired: fortyEightHourRequired ?? false,

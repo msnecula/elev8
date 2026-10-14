@@ -15,7 +15,7 @@ import {
 import { logJobActivity, logWorkOrderActivity } from '@/server/services/activityLogger';
 import { sendEmail, sendSMSToUser, buildSimpleEmail, sendDispatchEmail } from '@/server/services/notificationService';
 import { revalidatePath } from 'next/cache';
-import { formatDate } from '@/lib/utils';
+import { formatDate, parsePacificDateTime } from '@/lib/utils';
 import { addHours } from 'date-fns';
 import { FORTY_EIGHT_HOUR_REQUIRED_HOURS } from '@/lib/constants';
 import type { ActionResult } from '@/types/api';
@@ -101,7 +101,8 @@ export async function createWorkOrder(
   };
 
   // Calculate 48-hour deadline
-  const start = new Date(scheduledStart);
+  // Typed into datetime-local inputs as California time
+  const start = parsePacificDateTime(scheduledStart);
   const fortyEightHourDeadline = fortyEightHourNoticeRequired
     ? addHours(start, -FORTY_EIGHT_HOUR_REQUIRED_HOURS)
     : null;
@@ -114,7 +115,7 @@ export async function createWorkOrder(
       createdBy: user.id,
       status: 'draft',
       scheduledStart: start,
-      scheduledEnd: new Date(scheduledEnd),
+      scheduledEnd: parsePacificDateTime(scheduledEnd),
       region,
       requiredSkillTag,
       dispatchNotes: dispatchNotes ?? null,

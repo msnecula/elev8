@@ -9,7 +9,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatDate } from '@/lib/utils';
+import { formatDate, todayPacific } from '@/lib/utils';
 import {
   Briefcase, AlertTriangle, FileText, Clock,
   Plus, ArrowRight, XCircle, TrendingUp,
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
   if (user.role === 'technician') redirect('/technician');
   if (user.role === 'client') redirect('/client');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayPacific();
 
   const [activeJobRows, stageCountRows, draftProposalResult, recentJobs, recentNotices] =
     await Promise.all([

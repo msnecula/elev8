@@ -1,4 +1,5 @@
 import { BaseEmail, EmailHeading, EmailText, EmailButton, EmailInfoBox, EmailDivider } from './BaseEmail';
+import { COMPANY_NAME, COMPANY_PHONE } from '@/lib/constants';
 
 interface SchedulingEmailProps {
   clientName: string;
@@ -59,7 +60,9 @@ export function SchedulingEmail({
       )}
 
       <EmailText>
-        If you need to reschedule or have any questions, please contact us as soon as possible.
+        Need to reschedule or have a question? Call {COMPANY_NAME} at{' '}
+        <a href={`tel:${COMPANY_PHONE.replace(/\D/g, '')}`} style={{ color: '#2563eb' }}>{COMPANY_PHONE}</a>{' '}
+        as soon as possible. Use the button below to see the latest job details.
       </EmailText>
 
       <EmailButton href={jobUrl}>View Job Details</EmailButton>

@@ -18,6 +18,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Mirrors tsconfig paths; '@/drizzle' must come before '@' (first match wins).
+      '@/drizzle': resolve(import.meta.dirname, './drizzle'),
       '@': resolve(import.meta.dirname, './src'),
     },
   },

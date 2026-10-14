@@ -425,7 +425,8 @@ export async function updateNotice(
 // ─── Mark notice reviewed ─────────────────────────────────────────────────────
 
 export async function markNoticeReviewed(noticeId: string): Promise<ActionResult<void>> {
-  const user = await requireRole('admin', 'reviewer');
+  // Dispatchers reach this through "Approve Action Plan & Create Work Order" on /dispatch.
+  const user = await requireRole('admin', 'reviewer', 'dispatcher');
   await db.update(notices).set({ status: 'reviewed', updatedAt: new Date() }).where(eq(notices.id, noticeId));
   await logNoticeActivity(noticeId, 'note_added', 'Notice marked as reviewed', user.id);
   revalidatePath(`/notices/${noticeId}`);

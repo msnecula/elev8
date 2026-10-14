@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import type { UserRole } from '@/types/auth';
-import { CheckCircle2, Truck, MapPin, Clock, Loader2 } from 'lucide-react';
+import { CheckCircle2, Truck, MapPin, Clock, Loader2, PlayCircle } from 'lucide-react';
 
 interface WorkOrderActionsProps {
   workOrderId: string;
@@ -25,7 +25,7 @@ const TECH_TRANSITIONS: Record<string, { label: string; next: string; icon: Reac
 };
 
 export default function WorkOrderActions({
-  workOrderId, currentStatus, userRole, technicianId,
+  workOrderId, currentStatus, fortyEightHourStatus, userRole,
 }: WorkOrderActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -38,8 +38,24 @@ export default function WorkOrderActions({
 
   const showTechActions = isTechnician && transition && currentStatus !== 'completed';
   const showDispatcherHold = isDispatcher && ['dispatched','assigned','ready','en_route'].includes(currentStatus);
+  const showReleaseHold = isDispatcher && currentStatus === 'held';
+  // A hold caused by a late 48-hour notice lifts when the notice is marked sent.
+  const heldForLateNotice = showReleaseHold && fortyEightHourStatus === 'overdue';
 
-  if (!showTechActions && !showDispatcherHold) return null;
+  if (!showTechActions && !showDispatcherHold && !showReleaseHold) return null;
+
+  function releaseHold() {
+    startTransition(async () => {
+      const { releaseWorkOrderHold } = await import('@/server/actions/workOrders');
+      const result = await releaseWorkOrderHold({ workOrderId });
+      if (result.success) {
+        toast.success('Hold released');
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  }
 
   function updateStatus(newStatus: string, notes?: string) {
     startTransition(async () => {
@@ -97,7 +113,22 @@ export default function WorkOrderActions({
             Hold
           </Button>
         )}
+
+        {/* Release a hold */}
+        {showReleaseHold && !heldForLateNotice && (
+          <Button size="sm" variant="outline" onClick={releaseHold} disabled={isPending}>
+            <PlayCircle className="h-4 w-4 mr-1.5" />
+            Release Hold
+          </Button>
+        )}
       </div>
+
+      {heldForLateNotice && (
+        <p className="text-sm text-orange-700">
+          On hold because the 48-hour notice is overdue. Send the notice, then click{' '}
+          <strong>Mark Notice as Sent</strong> — the hold lifts automatically.
+        </p>
+      )}
 
       {/* Completion form */}
       {showComplete && (

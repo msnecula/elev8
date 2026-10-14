@@ -13,7 +13,7 @@ import {
   assignTechnicianSchema,
 } from '@/lib/validations/workOrder';
 import { logJobActivity, logWorkOrderActivity } from '@/server/services/activityLogger';
-import { sendEmail, sendSMS, buildSimpleEmail, sendDispatchEmail } from '@/server/services/notificationService';
+import { sendEmail, sendSMSToUser, buildSimpleEmail, sendDispatchEmail } from '@/server/services/notificationService';
 import { revalidatePath } from 'next/cache';
 import { formatDate } from '@/lib/utils';
 import { addHours } from 'date-fns';
@@ -158,7 +158,7 @@ export async function assignTechnician(
   // Verify technician is active and available
   const tech = await db.query.technicians.findFirst({
     where: eq(technicians.id, technicianId),
-    columns: { id: true, fullName: true, phone: true, isActive: true, isAvailable: true },
+    columns: { id: true, userId: true, fullName: true, isActive: true, isAvailable: true },
   });
 
   if (!tech) return { success: false, error: 'Technician not found' };
@@ -194,17 +194,15 @@ export async function assignTechnician(
     user.id,
   );
 
-  // SMS notification to technician
-  if (tech.phone) {
-    const dateStr = workOrder.scheduledStart
-      ? formatDate(workOrder.scheduledStart, 'EEEE, MMM d \'at\' h:mm a')
-      : 'TBD';
-    await sendSMS({
-      to: tech.phone,
-      body: `Elev8 Comply: You have been assigned a new job on ${dateStr}. Log in to view your work order details.`,
-      jobId: workOrder.jobId,
-    });
-  }
+  // SMS to the technician — only if they opted in (sendSMSToUser checks consent)
+  const assignedDate = workOrder.scheduledStart
+    ? formatDate(workOrder.scheduledStart, 'EEEE, MMM d \'at\' h:mm a')
+    : 'TBD';
+  await sendSMSToUser({
+    userId: tech.userId,
+    body: `Elev8 Comply: You have been assigned a new job on ${assignedDate}. Log in to view your work order details.`,
+    jobId: workOrder.jobId,
+  });
 
   revalidatePath('/dispatch');
   revalidatePath(`/work-orders/${workOrderId}`);
@@ -256,16 +254,16 @@ export async function dispatchWorkOrder(
   const tech = workOrder.assignedTechnicianId
     ? await db.query.technicians.findFirst({
         where: eq(technicians.id, workOrder.assignedTechnicianId),
-        columns: { fullName: true, phone: true, email: true },
+        columns: { userId: true, fullName: true, email: true },
       })
     : null;
 
-  if (tech?.phone) {
+  if (tech) {
     const dateStr = workOrder.scheduledStart
       ? formatDate(workOrder.scheduledStart, 'EEEE, MMM d \'at\' h:mm a')
       : 'today';
-    await sendSMS({
-      to: tech.phone,
+    await sendSMSToUser({
+      userId: tech.userId,
       body: `Elev8 Comply DISPATCH: You are dispatched for ${dateStr}. Open the app for your full dispatch packet.`,
       jobId: workOrder.jobId,
     });

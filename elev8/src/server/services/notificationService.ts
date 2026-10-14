@@ -1,6 +1,6 @@
 import 'server-only';
 import { db } from '@/server/db/client';
-import { notifications } from '@/drizzle/schema';
+import { notifications, users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { render } from '@react-email/render';
 import { EMAIL_FROM } from '@/lib/resend';
@@ -96,6 +96,28 @@ export async function sendSMS({
     console.error('[SMS] Send failed:', message);
     return { success: false, error: message };
   }
+}
+
+/**
+ * Texts a user only if they opted in to SMS (A2P 10DLC consent), and only at the
+ * number they opted in with — never their profile phone. Every app text to a person
+ * goes through here; sendSMS itself does no consent check.
+ */
+export async function sendSMSToUser({
+  userId, body, jobId,
+}: {
+  userId: string;
+  body: string;
+  jobId?: string;
+}): Promise<{ success: boolean; skipped?: 'no-consent'; error?: string }> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { smsConsentGiven: true, smsPhone: true, isActive: true },
+  });
+  if (!user?.isActive || !user.smsConsentGiven || !user.smsPhone) {
+    return { success: false, skipped: 'no-consent' };
+  }
+  return sendSMS({ to: user.smsPhone, body, jobId, userId });
 }
 
 // Simple HTML builder for quick non-template emails

@@ -284,7 +284,9 @@ export function buildFieldMappings(
   const companyState  = process.env.COMPANY_STATE   ?? 'CA';
   const companyZip    = process.env.COMPANY_ZIP     ?? '';
   const cccmLicense   = process.env.CCCM_LICENSE    ?? '';
-  const qeiNumber     = process.env.QEI_NUMBER      ?? '';
+  // Company's California CQCC (Certified Qualified Conveyance Company) number — the
+  // "CQCC" fields on the state forms are about the company, not the inspector's QEI.
+  const companyCqcc   = process.env.COMPANY_CQCC_LICENSE ?? '';
 
   // ── Parsed data helpers ────────────────────────────────────────────────────
   const propertyName   = String(parsedData.propertyName  ?? '');
@@ -295,7 +297,6 @@ export function buildFieldMappings(
 
   const mechanicName    = String(jobData?.mechanicName    ?? '');
   const mechanicLicense = String(jobData?.mechanicLicense ?? cccmLicense);
-  const inspectorQei    = String(jobData?.qeiNumber       ?? qeiNumber);
   const testDate        = String(jobData?.testDate        ?? '');
   const testTime        = String(jobData?.testTime        ?? '');
 
@@ -469,7 +470,7 @@ export function buildFieldMappings(
     // 'Cert Expiration Date' — leave for user
 
     // CQCC (company cert number)
-    set(inspectorQei, 'CQCC');
+    set(companyCqcc, 'CQCC');
 
     // Driving machine type checkboxes
     const isDirectHydraulic = elevatorType.includes('direct');
@@ -495,7 +496,7 @@ export function buildFieldMappings(
     // 'Cert Expiration Date' — leave for user
 
     // CQCC
-    set(inspectorQei, 'CQCC');
+    set(companyCqcc, 'CQCC');
     // Note: Row test results (Choice1-Choice6 button groups per row) are filled manually
   }
 
@@ -534,7 +535,7 @@ export function buildFieldMappings(
     set(companyName,  'Elevator Company Name');
     set(companyPhone, 'Telephone Number');
     set(companyAddr,  'Billing Address');
-    set(inspectorQei,    'CQCC #');
+    set(companyCqcc,    'CQCC #');
     set(propertyName, 'Building Name');
     set(streetOnly,   'Street');
     set(city,         'City');
@@ -549,7 +550,7 @@ export function buildFieldMappings(
     set(companyName,  'Elevator Company Name');
     set(companyPhone, 'Telephone Number');
     set(companyAddr,  'Billing Address');
-    set(inspectorQei,    'CQCC #');
+    set(companyCqcc,    'CQCC #');
     set(propertyName, 'Building Name');
     set(streetOnly,   'Street');
     set(city,         'City');
@@ -591,7 +592,7 @@ export function buildFieldMappings(
     // ─ Monthly Fire Testing Log (45 fields) ─────────────────────────────────
     set(streetOnly,  'JOB LOCATION');
     set(companyName, 'ELEVATOR COMPANY');
-    set(inspectorQei,   'CQCC NUMBER');
+    set(companyCqcc,   'CQCC NUMBER');
     set(equipmentId, 'STATE NUMBER');
     // 'FIRE KEY NUMBER' and 'YEAR' — left for user
     // Monthly fields (PRINT MECHANICS NAME [MON], MECHANICS SIGNATURE [MON],
@@ -607,7 +608,7 @@ export function buildFieldMappings(
 
     // CQCC info
     set(companyName,  'CQCC Business Name');
-    set(inspectorQei,    'CQCC cert');
+    set(companyCqcc,    'CQCC cert');
 
     // CCCM performing work (primary)
     set(mechanicName,    'CCCM Name1');

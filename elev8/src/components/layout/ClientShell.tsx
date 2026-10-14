@@ -25,6 +25,8 @@ interface ClientShellProps {
   accountName?: string;
   /** Pass false to show the SMS consent modal on first visit */
   smsConsentGiven: boolean;
+  /** The client already answered "No thanks" — don't ask again */
+  smsConsentDeclined?: boolean;
   /** Pre-fill modal phone if the user already has a phone on their profile */
   phone?: string;
 }
@@ -35,12 +37,14 @@ export default function ClientShell({
   email,
   accountName,
   smsConsentGiven,
+  smsConsentDeclined = false,
   phone,
 }: ClientShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [consentGiven, setConsentGiven] = useState(smsConsentGiven);
+  const [declined, setDeclined] = useState(smsConsentDeclined);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -51,10 +55,11 @@ export default function ClientShell({
   return (
     <div className="min-h-screen bg-slate-50">
       {/* SMS consent modal — shown first time a client logs in without prior consent */}
-      {!consentGiven && (
+      {!consentGiven && !declined && (
         <SMSConsentModal
           defaultPhone={phone ?? ''}
           onConsented={() => setConsentGiven(true)}
+          onDeclined={() => setDeclined(true)}
         />
       )}
       {/* Top navigation bar */}

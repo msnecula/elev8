@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: 'Privacy Policy and SMS Messaging Terms for Elev8 Comply',
 };
 
-const EFFECTIVE_DATE = 'October 1, 2026';
+const EFFECTIVE_DATE = 'October 14, 2026';
 const CONTACT_EMAIL = 'info@precisionliftco.com';
 
 export default function PrivacyPage() {
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
             <p className="mb-3">We use collected information to:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Manage elevator compliance jobs and track Cal/OSHA regulatory deadlines.</li>
-              <li>Send advance notice SMS messages to property managers prior to scheduled elevator repair or inspection visits, as required by California law.</li>
+              <li>Send transactional SMS alerts to people who have opted in (see Section 3): an opt-in confirmation, work order assignment and dispatch alerts for technicians, and 48-hour advance-notice deadline alerts for administrators and dispatchers.</li>
               <li>Generate and deliver repair proposals and compliance documents.</li>
               <li>Provide access to the client portal for property managers to review job status and approve proposals.</li>
               <li>Operate, maintain, and improve the Platform.</li>
@@ -80,33 +80,38 @@ export default function PrivacyPage() {
               <p className="text-blue-800">
                 <strong>Mobile opt-in information and SMS messaging consent are not shared with third parties
                 or affiliates for marketing or promotional purposes.</strong> Phone numbers collected through
-                this Platform are used solely to send regulatory advance-notice SMS messages required under
-                California elevator safety law.
+                this Platform are used solely to send the transactional SMS messages described below to people
+                who have opted in. SMS is optional and never a condition of using our services.
               </p>
             </div>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">How Consent Is Obtained</h3>
             <p className="mb-4">
-              Property managers and authorized building contacts provide their phone numbers directly to
-              {COMPANY_NAME} staff as part of establishing a service relationship for elevator compliance work.
-              By providing a phone number in connection with elevator compliance services, recipients consent
-              to receive automated SMS advance-notice messages from {COMPANY_NAME} related to scheduled
-              elevator repair or inspection visits at their property.
+              SMS messages are sent only to people who explicitly opt in. Users opt in by checking an
+              optional, unchecked consent box and entering their mobile number — on our{' '}
+              <Link href="/sms" className="text-blue-600 hover:underline">SMS opt-in page</Link>, in the
+              SMS Notifications section of their {APP_NAME} account, or in the client portal&apos;s SMS
+              prompt. Each of these offers a way to decline or skip. Providing a phone number for any other
+              purpose does not opt you in, and consent is never required to use our services. A
+              confirmation text is sent right after you opt in.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">Message Frequency</h3>
             <p className="mb-4">
-              Message frequency varies based on the number of elevator compliance jobs active at your
-              property. Recipients typically receive one (1) SMS message per scheduled visit, sent
-              approximately 48 hours before the scheduled date, as required by California law.
+              Message frequency varies with your role and active work: one confirmation when you opt in;
+              technicians receive a text when a job is assigned and when it is dispatched; administrators
+              and dispatchers receive up to two alerts before a 48-hour advance-notice deadline and one if
+              it is missed.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">Message Content</h3>
             <p className="mb-4">
-              SMS messages sent through this Platform are limited to operational advance notices containing:
-              the scheduled visit date and time window, a description of the work to be performed, the
-              name of the contractor, and contact information. No marketing or promotional messages are
-              sent through this system.
+              SMS messages sent through this Platform are transactional only: the opt-in confirmation, work
+              order assignment and dispatch alerts (date and time, with a link to the work order), and
+              48-hour advance-notice deadline alerts (property, date and a link to the work order). The
+              exact wording of every message is shown on our{' '}
+              <Link href="/sms" className="text-blue-600 hover:underline">SMS page</Link>. No marketing or
+              promotional messages are sent.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">Opt-Out</h3>
@@ -119,9 +124,8 @@ export default function PrivacyPage() {
               {' '}or{' '}
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-600 hover:underline">{CONTACT_EMAIL}</a>.
               After opting out, you will receive one confirmation message and no further SMS messages will be
-              sent to that number. Note that opting out of SMS may mean you do not receive legally required
-              advance notice of scheduled visits; {COMPANY_NAME} will use alternative contact methods in
-              that case.
+              sent to that number. Opting out never affects your access to our services; you will continue
+              to receive updates by email.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">Help</h3>

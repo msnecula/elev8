@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MessageSquare, CheckCircle2, XCircle } from 'lucide-react';
+import { SMS_PROGRAM_SUMMARY } from '@/lib/smsProgram';
 
 interface SMSConsentPanelProps {
   smsConsentGiven: boolean;
@@ -92,7 +93,7 @@ export default function SMSConsentPanel({
         </div>
         <div>
           <h2 className="text-base font-semibold text-slate-800">SMS Notifications</h2>
-          <p className="text-xs text-slate-500">Scheduling alerts and 48-hour advance notices from Precision Lift Co.</p>
+          <p className="text-xs text-slate-500">Optional text alerts from Precision Lift Co. — everything also comes by email.</p>
         </div>
       </div>
 
@@ -136,8 +137,8 @@ export default function SMSConsentPanel({
           </div>
 
           <p className="text-sm text-slate-600">
-            You are not currently enrolled in SMS notifications. Opt in below to receive scheduling
-            confirmations and 48-hour advance notices directly to your phone.
+            You are not enrolled in SMS notifications. Opting in is optional: you&apos;ll get a confirmation
+            text, then only the alerts for your role ({SMS_PROGRAM_SUMMARY}).
           </p>
 
           {!showOptIn ? (

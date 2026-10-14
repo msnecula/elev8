@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MessageSquare, X } from 'lucide-react';
+import { SMS_PROGRAM_SUMMARY } from '@/lib/smsProgram';
 
 const SESSION_DISMISSED_KEY = 'sms_consent_dismissed';
 
@@ -10,9 +11,11 @@ interface SMSConsentModalProps {
   defaultPhone?: string;
   /** Called after successful opt-in so the parent can hide the modal */
   onConsented: () => void;
+  /** Called after the user chooses "No thanks", so the parent stops asking */
+  onDeclined: () => void;
 }
 
-export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSConsentModalProps) {
+export default function SMSConsentModal({ defaultPhone = '', onConsented, onDeclined }: SMSConsentModalProps) {
   const [visible, setVisible] = useState(false);
   const [phone, setPhone] = useState(defaultPhone);
   const [consented, setConsented] = useState(false);
@@ -39,6 +42,15 @@ export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSC
       sessionStorage.setItem(SESSION_DISMISSED_KEY, '1');
     } catch { /* ignore */ }
     setVisible(false);
+  }
+
+  // Declining is a first-class answer (A2P 10DLC): it's recorded so we stop asking.
+  async function handleDecline() {
+    setVisible(false);
+    try {
+      await fetch('/api/user/sms-consent', { method: 'DELETE' });
+    } catch { /* not critical — worst case we ask again next session */ }
+    onDeclined();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -116,7 +128,7 @@ export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSC
               Stay ahead of your inspections
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              Opt in to receive SMS scheduling alerts and 48-hour advance notices.
+              Optional: get a text about your account. You can skip this — everything also comes by email.
             </p>
           </div>
         </div>
@@ -125,7 +137,7 @@ export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSC
           {/* Phone */}
           <div>
             <label htmlFor="modal-phone" className="block text-sm font-medium text-slate-700 mb-1">
-              Mobile phone number <span className="text-red-500">*</span>
+              Mobile phone number <span className="text-slate-400 font-normal">(only if you opt in)</span>
             </label>
             <input
               id="modal-phone"
@@ -146,13 +158,12 @@ export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSC
               type="checkbox"
               checked={consented}
               onChange={e => setConsented(e.target.checked)}
-              required
               className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
             />
             <label htmlFor="modal-consent" className="text-xs text-slate-600 cursor-pointer leading-relaxed">
               By checking this box, I consent to receive recurring automated transactional SMS
               messages from <strong>Precision Lift Co.</strong> (via Elev8 Comply) at the number
-              above. <strong>Msg &amp; data rates may apply. Frequency varies.</strong> Reply{' '}
+              above: {SMS_PROGRAM_SUMMARY}. <strong>Msg &amp; data rates may apply. Frequency varies.</strong> Reply{' '}
               <strong>STOP</strong> to opt out · <strong>HELP</strong> for assistance. See our{' '}
               <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">
                 Privacy Policy
@@ -177,6 +188,13 @@ export default function SMSConsentModal({ defaultPhone = '', onConsented }: SMSC
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
             >
               {loading ? 'Saving…' : 'Opt in to SMS'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDecline}
+              className="flex-1 sm:flex-none text-sm text-slate-600 hover:text-slate-800 px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              No thanks
             </button>
             <button
               type="button"

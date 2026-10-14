@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { SMS_MESSAGE_TYPES, SMS_PROGRAM_SUMMARY, SMS_WELCOME_TEXT } from '@/lib/smsProgram';
 
 const COMPANY_NAME = 'Precision Lift Co.';
 const COMPANY_PHONE = '562 304-9444';
@@ -120,9 +121,8 @@ export default function SmsOptInPage() {
               <div className="text-green-600 text-3xl mb-3">✓</div>
               <p className="font-semibold text-green-800 mb-2 text-lg">You&apos;re opted in!</p>
               <p className="text-sm text-green-700 leading-relaxed">
-                Your consent has been recorded. You&apos;ll receive SMS updates when there is active
-                work on your account — scheduling confirmations, 48-hour advance notices, and
-                work order updates.
+                Your consent has been recorded and a confirmation text is on its way. After that,
+                you&apos;ll only receive the alerts listed below that apply to your role.
               </p>
               <div className="mt-4 pt-4 border-t border-green-200">
                 <p className="text-xs text-green-600">
@@ -201,9 +201,7 @@ export default function SmsOptInPage() {
                     <strong>Yes, send me SMS updates.</strong>{' '}
                     By checking this box, I voluntarily agree to receive recurring automated
                     transactional SMS messages from <strong>{COMPANY_NAME}</strong> (via the Elev8
-                    Comply platform) at the mobile number I provided above. Messages may include
-                    scheduling confirmations, 48-hour advance notices, and work order updates
-                    related to my elevator compliance service.{' '}
+                    Comply platform) at the mobile number I provided above: {SMS_PROGRAM_SUMMARY}.{' '}
                     <strong>Message and data rates may apply. Message frequency varies.</strong>{' '}
                     Reply <strong>STOP</strong> to opt out at any time. Reply <strong>HELP</strong>{' '}
                     for assistance. See our{' '}
@@ -281,8 +279,8 @@ export default function SmsOptInPage() {
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">3</div>
               <div>
-                <p className="font-medium text-gray-900">Messages begin when work is scheduled</p>
-                <p className="text-sm text-gray-600 mt-0.5">SMS messages are sent only when there is active work on your account — scheduling confirmations, 48-hour advance notices, and work order updates.</p>
+                <p className="font-medium text-gray-900">A confirmation, then only alerts for your role</p>
+                <p className="text-sm text-gray-600 mt-0.5">You get one confirmation text right after opting in. After that, texts are sent only for active work: technicians are told when a job is assigned or dispatched to them, and admins and dispatchers are alerted before a 48-hour advance-notice deadline. The full list is below.</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -310,7 +308,7 @@ export default function SmsOptInPage() {
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">P</div>
                   <div className="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
                     <p className="text-xs text-gray-800 leading-relaxed">
-                      <strong>Precision Lift Co.:</strong> You&apos;re now enrolled in SMS notifications for your elevator compliance service. You&apos;ll receive scheduling confirmations and advance notices when work is active. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help.
+                      {SMS_WELCOME_TEXT}
                     </p>
                   </div>
                 </div>
@@ -333,11 +331,11 @@ export default function SmsOptInPage() {
                   <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">P</div>
                   <div className="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
                     <p className="text-xs text-gray-800 leading-relaxed">
-                      <strong>Precision Lift Co.:</strong> You have been unsubscribed. No further SMS messages will be sent to this number. To re-enroll, visit elev8comply.com/sms.
+                      You have successfully been unsubscribed. You will not receive any more messages from this number. Reply START to resubscribe.
                     </p>
                   </div>
                 </div>
-                <p className="text-center text-xs text-gray-400">Unsubscribe confirmed — no further messages sent</p>
+                <p className="text-center text-xs text-gray-400">One automatic unsubscribe confirmation — then no further messages</p>
               </div>
             </div>
           </div>
@@ -345,26 +343,18 @@ export default function SmsOptInPage() {
 
         {/* Message types */}
         <section className="mb-10">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Types of Messages You May Receive</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-1">Every Message We Send</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            These are the only texts the program sends. You receive only the ones for your role. All are
+            transactional — no marketing.
+          </p>
           <div className="space-y-3">
-            {[
-              {
-                label: 'Scheduling confirmation',
-                example: 'Precision Lift Co.: Your elevator inspection at 123 Main St has been confirmed for Mon, Nov 4 at 9:00 AM. Reply STOP to opt out.',
-              },
-              {
-                label: '48-hour advance notice',
-                example: 'Precision Lift Co.: 48-hour notice — compliance inspection scheduled for tomorrow, Nov 5 at 9:00 AM at 456 Broadway. Questions? Call us.',
-              },
-              {
-                label: 'Work order update',
-                example: 'Precision Lift Co.: Work order #WO-2024-001 has been updated. Log in to Elev8 Comply to view details. Reply STOP to opt out.',
-              },
-            ].map(({ label, example }) => (
+            {SMS_MESSAGE_TYPES.map(({ label, who, when, example }) => (
               <div key={label} className="border border-gray-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-2">{label}</p>
+                <p className="text-sm font-semibold text-gray-700">{label}</p>
+                <p className="text-xs text-gray-500 mb-2">{who} · {when}</p>
                 <div className="bg-gray-100 rounded-md px-3 py-2">
-                  <p className="text-sm text-gray-600 font-mono">{example}</p>
+                  <p className="text-sm text-gray-600 font-mono whitespace-pre-line">{example}</p>
                 </div>
               </div>
             ))}

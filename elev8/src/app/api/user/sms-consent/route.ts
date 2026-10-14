@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/server/db/client';
 import { users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { sendSmsWelcome } from '@/server/services/notificationService';
 
 /**
  * POST /api/user/sms-consent
@@ -46,6 +47,13 @@ export async function POST(request: Request) {
         updatedAt: new Date(),
       })
       .where(eq(users.id, user.id));
+
+    // Confirm the opt-in by text (rate-limited per number); a failed send doesn't undo consent.
+    try {
+      await sendSmsWelcome({ to: formattedPhone, userId: user.id });
+    } catch (err) {
+      console.error('[sms-consent] welcome SMS failed (non-fatal):', err instanceof Error ? err.message : err);
+    }
 
     return NextResponse.json({ success: true, phone: formattedPhone });
   } catch (err) {

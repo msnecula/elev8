@@ -1,12 +1,13 @@
 import 'server-only';
 import { db } from '@/server/db/client';
 import { notifications, users } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { render } from '@react-email/render';
 import { EMAIL_FROM } from '@/lib/resend';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { APP_NAME, APP_URL } from '@/lib/constants';
 import type { UserRole } from '@/types/auth';
+import { SMS_WELCOME_TEXT } from '@/lib/smsProgram';
 
 // ─── Core send helpers ────────────────────────────────────────────────────────
 
@@ -118,6 +119,25 @@ export async function sendSMSToUser({
     return { success: false, skipped: 'no-consent' };
   }
   return sendSMS({ to: user.smsPhone, body, jobId, userId });
+}
+
+/**
+ * The opt-in confirmation text, sent right after someone opts in (CTIA/A2P
+ * expect one). At most one per number per 24 hours, so the public /sms form
+ * can't be used to text someone repeatedly.
+ */
+export async function sendSmsWelcome({ to, userId }: { to: string; userId?: string }) {
+  const recent = await db.query.notifications.findFirst({
+    where: and(
+      eq(notifications.type, 'sms'),
+      eq(notifications.channel, to),
+      eq(notifications.body, SMS_WELCOME_TEXT),
+      gt(notifications.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+    ),
+    columns: { id: true },
+  });
+  if (recent) return { success: false, skipped: 'recently-sent' as const };
+  return sendSMS({ to, body: SMS_WELCOME_TEXT, userId });
 }
 
 // Simple HTML builder for quick non-template emails

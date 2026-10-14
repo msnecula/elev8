@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: `Terms of Service and SMS Messaging Terms for ${APP_NAME} by ${COMPANY_NAME}`,
 };
 
-const EFFECTIVE_DATE = 'October 1, 2026';
+const EFFECTIVE_DATE = 'October 14, 2026';
 const CONTACT_EMAIL = 'info@precisionliftco.com';
 
 export default function TermsPage() {
@@ -89,30 +89,28 @@ export default function TermsPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-5">
               <p className="font-semibold text-blue-900 mb-2">Important — SMS Consent &amp; Opt-Out</p>
               <p className="text-blue-800">
-                By providing a phone number to {COMPANY_NAME} in connection with elevator compliance services,
-                you consent to receive automated transactional SMS messages from {COMPANY_NAME} via the
-                {' '}{APP_NAME} platform. <strong>Mobile opt-in information and SMS consent are never shared
-                with third parties or affiliates for marketing or promotional purposes.</strong>
+                SMS messages from {COMPANY_NAME} via the {APP_NAME} platform are sent only to people who
+                explicitly opt in. Opting in is optional and is never a condition of using our services.{' '}
+                <strong>Mobile opt-in information and SMS consent are never shared with third parties or
+                affiliates for marketing or promotional purposes.</strong>
               </p>
             </div>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.1 Who Receives SMS Messages</h3>
             <p className="mb-4">
-              SMS messages are sent only to property managers, building owners, and authorized building contacts
-              who have an active elevator compliance service relationship with {COMPANY_NAME} and have provided
-              their phone number as part of that service engagement. Recipients are not members of the general
-              public; they are parties with an existing business relationship related to elevator compliance work
-              at their property.
+              SMS messages are sent only to {APP_NAME} users — {COMPANY_NAME} technicians, dispatchers and
+              administrators, and clients (property managers, building owners and authorized building
+              contacts) — who have explicitly opted in to SMS. Which messages a person receives depends on
+              their role (see 2.3).
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.2 How Consent Is Obtained</h3>
             <p className="mb-4">
-              Consent is obtained when a property manager or authorized building contact provides their phone
-              number directly to {COMPANY_NAME} staff as part of establishing or maintaining a service
-              relationship for elevator compliance work. By providing a phone number for elevator compliance
-              services, the recipient acknowledges that they may receive automated advance-notice SMS messages
-              related to scheduled elevator inspection or repair visits at their property. The opt-in disclosure
-              is also displayed on the {APP_NAME} login page at <strong>{APP_URL}/login</strong>.
+              Users opt in by checking an optional, unchecked SMS consent box and entering their mobile number —
+              on the SMS opt-in page at <strong>{APP_URL}/sms</strong>, in the SMS Notifications section of
+              their {APP_NAME} account, or in the client portal&apos;s SMS prompt. Each offers an explicit way to
+              decline or skip, and declining never limits access to our services. Providing a phone number for
+              any other purpose is not consent to SMS. A confirmation text is sent immediately after opting in.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.3 Types of Messages Sent</h3>
@@ -122,29 +120,32 @@ export default function TermsPage() {
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>
-                <strong>Scheduling Confirmations:</strong> Confirmation of an upcoming elevator inspection or
-                repair appointment, including date, time window, and work description.
+                <strong>Opt-in Confirmation (everyone who opts in):</strong> One message immediately after
+                opting in, confirming enrollment, frequency, rates, and HELP/STOP instructions.
               </li>
               <li>
-                <strong>48-Hour Advance Notices:</strong> Legally required advance notice to property managers
-                of a scheduled elevator inspection or repair visit, sent approximately 48 hours prior to the
-                visit as required under California elevator safety regulations.
+                <strong>Work Order Assigned (technicians):</strong> Notice that a job has been assigned, with
+                its scheduled date and time.
               </li>
               <li>
-                <strong>Work Order Status Updates:</strong> Notification that a work order has been updated;
-                recipients are directed to log in to the client portal for details.
+                <strong>Work Order Dispatched (technicians):</strong> Notice that the technician has been
+                dispatched, directing them to the dispatch packet in the app.
               </li>
               <li>
-                <strong>Appointment Reminders:</strong> Reminders of upcoming scheduled visits.
+                <strong>48-Hour Advance-Notice Deadline Alerts (administrators and dispatchers):</strong> An
+                alert 24 hours before a Cal/OSHA 48-hour advance-notice deadline, a second (urgent) alert at
+                4 hours, and an alert if the deadline is missed.
               </li>
             </ul>
+            <p className="mb-4">
+              The exact wording of every message is published at <strong>{APP_URL}/sms</strong>.
+            </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.4 Message Frequency</h3>
             <p className="mb-4">
-              Message frequency varies based on the number of active elevator compliance jobs at the recipient&rsquo;s
-              property. Recipients typically receive one (1) SMS message per scheduled visit, sent approximately
-              48 hours in advance. Additional messages may be sent if appointments are rescheduled or if there
-              are compliance-related updates requiring notification.
+              Message frequency varies with the recipient&rsquo;s role and active work: one confirmation at
+              opt-in; for technicians, two messages per assigned job (assigned and dispatched); for
+              administrators and dispatchers, up to three alerts per 48-hour advance-notice deadline.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.5 Message and Data Rates</h3>
@@ -168,9 +169,8 @@ export default function TermsPage() {
               </a>.
             </p>
             <p className="mb-4">
-              <strong>Note:</strong> Opting out of SMS may mean you do not receive legally required 48-hour
-              advance notices of scheduled elevator visits. In that case, {COMPANY_NAME} will use alternative
-              contact methods (email or phone call) to fulfill its notification obligations.
+              <strong>Note:</strong> Opting out of SMS never affects your access to our services. You will
+              continue to receive updates by email.
             </p>
 
             <h3 className="text-base font-semibold text-slate-900 mb-2">2.7 Opt-In Instructions</h3>

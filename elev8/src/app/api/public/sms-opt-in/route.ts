@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/server/db/client';
 import { users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { sendSmsWelcome } from '@/server/services/notificationService';
 
 /**
  * POST /api/public/sms-opt-in
@@ -82,6 +83,15 @@ export async function POST(request: Request) {
   } catch (err) {
     // Non-fatal — the proof page must always succeed for Twilio reviewers.
     console.error('[public/sms-opt-in] DB update failed (non-fatal):', err instanceof Error ? err.message : err);
+  }
+
+  // Confirm the opt-in by text, as the /sms page promises (rate-limited per number).
+  if (optIn) {
+    try {
+      await sendSmsWelcome({ to: formattedPhone });
+    } catch (err) {
+      console.error('[public/sms-opt-in] welcome SMS failed (non-fatal):', err instanceof Error ? err.message : err);
+    }
   }
 
   return NextResponse.json({ success: true });

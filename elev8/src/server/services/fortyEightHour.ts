@@ -7,6 +7,7 @@ import { logWorkOrderActivity } from './activityLogger';
 import { addHours } from 'date-fns';
 import { FORTY_EIGHT_HOUR_ALERT_THRESHOLD_HOURS } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
+import { smsFortyEightHourDue, smsFortyEightHourOverdue } from '@/lib/smsProgram';
 
 /** Hours before the deadline at which the "due soon" alert turns URGENT and is sent a second time. */
 const URGENT_ALERT_HOURS = 4;
@@ -107,7 +108,7 @@ export async function sweepFortyEightHourNotices(): Promise<{
             : 'TBD';
           const sms = await sendSMSToUser({
             userId: staff.id,
-            body: `🚨 ELEV8 COMPLY — 48HR NOTICE OVERDUE\n${propertyName ?? jobTitle ?? 'Job'} on ${dateStr} is now HELD. Mark notice sent before dispatching.\nelev8comply.com/work-orders/${wo.id}`,
+            body: smsFortyEightHourOverdue({ place: propertyName ?? jobTitle ?? 'Job', date: dateStr, workOrderId: wo.id }),
             jobId: wo.jobId,
           });
           if (sms.success) alertsSent++;
@@ -173,10 +174,11 @@ export async function sweepFortyEightHourNotices(): Promise<{
         const dateStr = wo.scheduledStart
           ? formatDate(wo.scheduledStart, 'MMM d')
           : 'TBD';
-        const urgency = stage === 'due-4h' ? '⚠️ URGENT' : '⚠️';
         const sms = await sendSMSToUser({
           userId: staff.id,
-          body: `${urgency} ELEV8 COMPLY — 48HR NOTICE DUE IN ${hoursLeft}H\n${propertyName ?? jobTitle ?? 'Job'} on ${dateStr}. Send building notice now.\nelev8comply.com/work-orders/${wo.id}`,
+          body: smsFortyEightHourDue({
+            urgent: stage === 'due-4h', hoursLeft, place: propertyName ?? jobTitle ?? 'Job', date: dateStr, workOrderId: wo.id,
+          }),
           jobId: wo.jobId,
         });
         if (sms.success) alertsSent++;

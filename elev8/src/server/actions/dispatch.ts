@@ -16,6 +16,7 @@ import { logJobActivity, logWorkOrderActivity } from '@/server/services/activity
 import { sendEmail, sendSMSToUser, buildSimpleEmail, sendDispatchEmail } from '@/server/services/notificationService';
 import { revalidatePath } from 'next/cache';
 import { formatDate, parsePacificDateTime } from '@/lib/utils';
+import { smsWorkOrderAssigned, smsWorkOrderDispatched } from '@/lib/smsProgram';
 import { addHours } from 'date-fns';
 import { FORTY_EIGHT_HOUR_REQUIRED_HOURS } from '@/lib/constants';
 import type { ActionResult } from '@/types/api';
@@ -201,7 +202,7 @@ export async function assignTechnician(
     : 'TBD';
   await sendSMSToUser({
     userId: tech.userId,
-    body: `Elev8 Comply: You have been assigned a new job on ${assignedDate}. Log in to view your work order details.`,
+    body: smsWorkOrderAssigned(assignedDate),
     jobId: workOrder.jobId,
   });
 
@@ -265,7 +266,7 @@ export async function dispatchWorkOrder(
       : 'today';
     await sendSMSToUser({
       userId: tech.userId,
-      body: `Elev8 Comply DISPATCH: You are dispatched for ${dateStr}. Open the app for your full dispatch packet.`,
+      body: smsWorkOrderDispatched(dateStr),
       jobId: workOrder.jobId,
     });
   }

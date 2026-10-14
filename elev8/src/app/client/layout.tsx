@@ -23,13 +23,15 @@ export default async function ClientLayout({ children }: { children: React.React
   // Default smsConsentGiven=true so the modal is suppressed if the migration
   // hasn't been run yet — prevents a crash on every client page.
   let smsConsentGiven = true;
+  let smsConsentDeclined = false;
   let phone: string | undefined;
   try {
     const userRow = await db.query.users.findFirst({
       where: eq(users.id, user.id),
-      columns: { smsConsentGiven: true, phone: true },
+      columns: { smsConsentGiven: true, smsConsentRevokedAt: true, phone: true },
     });
     smsConsentGiven = userRow?.smsConsentGiven ?? true;
+    smsConsentDeclined = !!userRow?.smsConsentRevokedAt;
     phone = userRow?.phone ?? undefined;
   } catch {
     // Migration 05 not yet applied — safe defaults used above
@@ -41,6 +43,7 @@ export default async function ClientLayout({ children }: { children: React.React
       email={user.email}
       accountName={accountRow?.name}
       smsConsentGiven={smsConsentGiven}
+      smsConsentDeclined={smsConsentDeclined}
       phone={phone}
     >
       {children}

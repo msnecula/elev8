@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Elev8 Comply</string>
+    <string name="title_activity_main">Elev8 Comply</string>
+    <string name="package_name">com.elev8comply.app</string>
+    <string name="custom_url_scheme">com.elev8comply.app</string>
+</resources>

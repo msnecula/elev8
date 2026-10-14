@@ -1,0 +1,17 @@
+{
+  "appId": "com.elev8comply.app",
+  "appName": "Elev8 Comply",
+  "webDir": "www",
+  "server": {
+    "url": "https://www.elev8comply.com",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#1E40AF"
+  },
+  "android": {
+    "backgroundColor": "#1E40AF"
+  }
+}

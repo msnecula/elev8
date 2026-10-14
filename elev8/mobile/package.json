@@ -1,0 +1,21 @@
+{
+  "name": "elev8-comply-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS and Android apps for Elev8 Comply — a native shell around https://www.elev8comply.com",
+  "scripts": {
+    "sync": "cap sync",
+    "icons": "capacitor-assets generate --iconBackgroundColor '#1E40AF' --splashBackgroundColor '#1E40AF'",
+    "ios": "cap open ios",
+    "android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.3"
+  }
+}

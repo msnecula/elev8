@@ -5,8 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
-import { APP_URL } from '@/lib/constants';
+import { requestPasswordReset } from '@/server/actions/passwordReset';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +16,6 @@ const schema = z.object({ email: z.string().email('Invalid email address') });
 type Input = z.infer<typeof schema>;
 
 export default function ForgotPasswordForm() {
-  const supabase = createClient();
   const [sent, setSent] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -25,10 +23,9 @@ export default function ForgotPasswordForm() {
 
   async function onSubmit(data: Input) {
     setServerError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-      redirectTo: `${APP_URL}/api/auth/callback?next=/reset-password`,
-    });
-    if (error) { setServerError(error.message); return; }
+    // Sent through our own email (Resend), like invites — not Supabase's mailer.
+    const result = await requestPasswordReset(data);
+    if (!result.success) { setServerError(result.error); return; }
     setSent(true);
   }
 
@@ -44,7 +41,8 @@ export default function ForgotPasswordForm() {
           <div>
             <h2 className="text-lg font-semibold">Check your email</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              We've sent a password reset link. Check your inbox and follow the instructions.
+              If that email has an account, we&apos;ve sent it a password reset link. It can take a minute to
+              arrive — check your spam folder too.
             </p>
           </div>
           <Link href="/login" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
@@ -59,7 +57,7 @@ export default function ForgotPasswordForm() {
     <Card className="shadow-lg">
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl font-bold text-center">Reset your password</CardTitle>
-        <CardDescription className="text-center">Enter your email and we'll send you a reset link</CardDescription>
+        <CardDescription className="text-center">Enter your email and we&apos;ll send you a reset link</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

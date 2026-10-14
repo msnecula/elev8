@@ -318,6 +318,29 @@ export async function sendInviteEmail({
   });
 }
 
+// ─── Forgot password ──────────────────────────────────────────────────────────
+
+export const PASSWORD_RESET_SUBJECT = `Reset your ${APP_NAME} password`;
+
+export async function sendPasswordResetEmail({
+  to, name, resetUrl, userId,
+}: {
+  to: string;
+  name: string;
+  resetUrl: string;
+  userId: string;
+}) {
+  const { PasswordResetEmail } = await import('@/emails/PasswordResetEmail');
+  return sendEmail({
+    to,
+    subject: PASSWORD_RESET_SUBJECT,
+    html: await render(PasswordResetEmail({ name, resetUrl })),
+    // The link signs whoever opens it in, so the log keeps a copy without it.
+    logBody: await render(PasswordResetEmail({ name, resetUrl: '#reset-link-not-stored' })),
+    userId,
+  });
+}
+
 // ─── Self-service email change ────────────────────────────────────────────────
 
 export async function sendEmailChangeEmails({

@@ -25,6 +25,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/webhooks') ||
+    // Vercel Cron has no session cookie; the route checks CRON_SECRET itself
+    pathname.startsWith('/api/cron') ||
     pathname.startsWith('/api/public') ||
     pathname === '/'
   ) {

@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration';
+import { VercelAnalytics } from '@/components/VercelAnalytics';
 import { APP_NAME } from '@/lib/constants';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -98,6 +99,7 @@ export default function RootLayout({
         <Toaster richColors closeButton position="top-right" />
         <InstallPrompt />
         <ServiceWorkerRegistration />
+        <VercelAnalytics />
       </body>
     </html>
   );

@@ -72,9 +72,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude: Next.js internals, static assets, PWA files (manifest, sw.js),
-  // and common public file extensions that need no auth check.
+  // Exclude: Next.js internals, Vercel Analytics (/_vercel), static assets,
+  // PWA files (manifest, sw.js), and common public file extensions that need
+  // no auth check.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest|json)$).*)',
+    '/((?!_next/static|_next/image|_vercel|favicon.ico|sw\\.js|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest|json)$).*)',
   ],
 };
